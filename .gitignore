@@ -1,0 +1,13 @@
+# Cubism/Adobe temporary and backup files
+*.autosave
+*.bak
+*.tmp
+~$*
+
+# Official/reference assets stay local unless redistribution is confirmed.
+reference/*
+!reference/README.md
+
+# Generated QA captures are replaceable.
+qa/*.png
+
