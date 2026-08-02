@@ -13,5 +13,6 @@ qa/*.png
 
 # Local dependency/download caches.
 .uv-cache/
+logs/*.log
+logs/*.csv
 tools/see-through/.venv/
-

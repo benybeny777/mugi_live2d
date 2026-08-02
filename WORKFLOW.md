@@ -22,13 +22,21 @@
 
 ## 2. パーツPSDを作る
 
-1. `tools/see-through` の公式8GB向けNF4量子化スクリプトで、元画像から塗り足し済みの意味レイヤーPSDを生成する。
-2. このPCではRTX 5060 Laptop GPU 8GBのため、1024解像度・NF4・group offloadを使う。
-3. 初回だけ `scripts/setup-seethrough.ps1`、生成時は `scripts/run-seethrough.ps1` を実行する。実測により1024解像度を採用している。
+1. `tools/see-through` の公式8GB向けblockswapスクリプトで、元画像から塗り足し済みの意味レイヤーPSDを生成する。
+2. このPCではRTX 5060 Laptop GPU 8GBのため、LayerDiff 1024・Depth 512・blockswapを標準設定にする。NF4のCPU offload経路は公式コードのデバイス不整合があるため予備扱いとする。
+3. 初回だけ `scripts/setup-seethrough.ps1` と `scripts/apply-seethrough-local-fixes.ps1`、生成時は `scripts/run-seethrough.ps1 -Mode blockswap` を実行する。
 4. See-through出力を `work/psd/seethrough/` に保存し、元出力を直接上書きしない。
 5. Photoshop 2026で各レイヤーを高品質拡大し、ひより基準の2976×4175キャンバスへ戻す。
 6. 見えていた表面は元の2976×4175画像をSee-throughマスクで再合成し、See-through生成画は隠れ部分の塗り足しにだけ使う。
 7. `C:\00_PG\30_live` の処理で、See-throughの意味レイヤーをひより互換の目・まつげ・口・髪レイヤー名へ変換する。
+
+### ログ確認
+
+- `logs/seethrough-*.stdout.log`: 工程と進捗
+- `logs/seethrough-*.stderr.log`: 警告、トレースバック、進捗バー
+- `logs/seethrough-*.lifecycle.log`: 開始時刻、モード、終了コード、例外、終了時刻
+- `logs/seethrough-monitor.csv`: CPU、GPU、メモリ、出力ファイル数と容量
+- プロセスの有無だけで正常判定せず、4種類のログを合わせて確認する。
 8. 顔、前髪、横髪、後髪、目、まつげ、眉、口、首、胴体、腕を独立レイヤーにする。
 9. 顔レイヤーは目・眉・鼻・口を消した下地にし、輪郭の穴や塗り足しを100%表示で確認する。
 10. Photoshopで直した場合も、レイヤー名とキャンバス位置は変えない。

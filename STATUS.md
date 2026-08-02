@@ -16,7 +16,7 @@
 
 ## 未完了
 
-- See-through NF4環境の構築と初回PSD生成
+- See-through blockswap環境の初回PSD生成（詳細ログ付きで実行中）
 - See-through出力のPhotoshop目視修正とひより互換名への変換
 - まばたき、口パク、髪揺れの端値目視確認
 - Cubism編集ファイルの保存
