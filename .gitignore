@@ -11,3 +11,7 @@ reference/*
 # Generated QA captures are replaceable.
 qa/*.png
 
+# Local dependency/download caches.
+.uv-cache/
+tools/see-through/.venv/
+
