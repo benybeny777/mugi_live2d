@@ -2,9 +2,9 @@
 
 ## 動作プレビュー
 
-[![むぎのCubism動作プレビュー](docs/media/mugi-cubism-preview.gif)](docs/media/mugi-cubism-preview.mp4)
+[![むぎのLive2D動作プレビュー](docs/media/mugi-cubism-preview.gif)](docs/media/mugi-cubism-preview.mp4)
 
-静止、まばたき、口の開閉を切り替えたCubism確認記録です。画像をクリックするとMP4版を開けます。モデル修正後は同じ構成で撮り直し、READMEの表示と実データを揃えます。
+SDK 5モデルを直接描画したキャラクター単体のプレビューです。視線・顔向き、まばたき、口の開閉、髪揺れを自動再生します。画像をクリックするとMP4版を開けます。
 
 HTMLベースのローカル動作確認ツールは `viewer/README.md` を参照してください。SDK 5/4の読込、上半身表示、視線追従、まばたき、口パク、髪揺れをブラウザで確認できます。
 

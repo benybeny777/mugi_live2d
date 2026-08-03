@@ -22,3 +22,8 @@ button.toggle { background: #302d24; border-color: #655f4a; } button.toggle.acti
 dl { margin: 0; display: grid; gap: 7px; } dl div { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; } dt { color: #93a095; } dd { margin: 0; }
 pre { min-height: 120px; max-height: 210px; overflow: auto; white-space: pre-wrap; background: #0b0f0c; color: #b6d9ba; padding: 10px; border-radius: 9px; font: 11px/1.45 Consolas, monospace; }
 @media (max-width: 960px) { main { grid-template-columns: 1fr; } .stage-card { min-height: 720px; } }
+.demo-mode { overflow: hidden; background: linear-gradient(#eef5eb, #cadac8); }
+.demo-mode main { display: block; min-height: 100vh; padding: 0; }
+.demo-mode .stage-card { min-height: 100vh; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.demo-mode header, .demo-mode .hint, .demo-mode .controls { display: none; }
+.demo-mode #stage { width: 100vw; height: 100vh; min-height: 100vh; margin: 0; border-radius: 0; }

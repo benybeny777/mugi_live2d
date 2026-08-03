@@ -1,7 +1,8 @@
 "use strict";
 
 const runtimeScripts = ["vendor/live2dcubismcore.min.js", "vendor/pixi.min.js", "vendor/cubism4.min.js"];
-const viewerVersion = "7";
+const viewerVersion = "8";
+const demoMode = new URLSearchParams(location.search).get("demo") === "1";
 const parameterIds = {
   eyeL: ["ParamEyeLOpen", "PARAM_EYE_L_OPEN"], eyeR: ["ParamEyeROpen", "PARAM_EYE_R_OPEN"],
   mouth: ["ParamMouthOpenY", "PARAM_MOUTH_OPEN_Y"], hairFront: ["ParamHairFront", "PARAM_HAIR_FRONT"],
@@ -74,7 +75,16 @@ function updateParameters() {
   if (!model) return;
   const now = performance.now(), cycle = now % 4200, automaticClose = autoBlink && cycle > 3650 && cycle < 3810;
   const eyes = (automaticClose || now < blinkUntil) ? 0 : 1;
-  setParameter(parameterIds.eyeL, eyes); setParameter(parameterIds.eyeR, eyes); setParameter(parameterIds.mouth, Number($("mouth").value));
+  const demoSeconds = now / 1000;
+  const mouth = demoMode ? Math.max(0, Math.sin(demoSeconds * 2.2)) * 0.65 : Number($("mouth").value);
+  setParameter(parameterIds.eyeL, eyes); setParameter(parameterIds.eyeR, eyes); setParameter(parameterIds.mouth, mouth);
+  if (demoMode) {
+    const stage = $("stage");
+    model.focus(
+      stage.clientWidth * (0.5 + Math.sin(demoSeconds * 0.72) * 0.28),
+      stage.clientHeight * (0.42 + Math.sin(demoSeconds * 0.51 + 0.8) * 0.18),
+    );
+  }
   if (hairMotion) {
     const seconds = now / 1000;
     setParameter(parameterIds.hairFront, Math.sin(seconds * 1.25) * 0.45);
@@ -94,4 +104,5 @@ for (const id of ["mouth", "zoom", "offset"]) {
   $(id).addEventListener("input", event => { const value = Number(event.target.value); $(`${id}Value`).value = id === "offset" ? String(value) : value.toFixed(2); if (id !== "mouth") resizeStage(); });
 }
 $("stage").addEventListener("pointermove", event => { if (!model) return; const rect = $("stage").getBoundingClientRect(); model.focus(event.clientX - rect.left, event.clientY - rect.top); });
+if (demoMode) document.body.classList.add("demo-mode");
 window.addEventListener("resize", resizeStage); loadModel();
