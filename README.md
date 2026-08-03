@@ -1,5 +1,11 @@
 # むぎ Live2D モデル
 
+## 動作プレビュー
+
+[![むぎのCubism動作プレビュー](docs/media/mugi-cubism-preview.gif)](docs/media/mugi-cubism-preview.mp4)
+
+静止、まばたき、口の開閉を切り替えたCubism確認記録です。画像をクリックするとMP4版を開けます。モデル修正後は同じ構成で撮り直し、READMEの表示と実データを揃えます。
+
 HTMLベースのローカル動作確認ツールは `viewer/README.md` を参照してください。SDK 5/4の読込、上半身表示、視線追従、まばたき、口パク、髪揺れをブラウザで確認できます。
 
 むぎ専用のモデル制作・書き出し管理ディレクトリです。
