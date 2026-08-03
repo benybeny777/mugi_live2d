@@ -17,7 +17,7 @@
 - GPUはVRAM 8GBのため、標準実行は公式の8GB向けblockswap経路を使う。NF4経路を使う場合はgroup offloadとCPU offloadを有効にする。
 - 初期解像度はLayerDiff 1024、Depth 512とし、安定完走を確認してから品質設定を上げる。
 - CUDAメモリ不足が出た場合は、まず他のGPUプロセスとログを確認し、解像度変更は記録してから行う。
-- セットアップ後に `scripts/apply-seethrough-local-fixes.ps1` を実行し、CPU offload時の入力テンソルをCUDA実行デバイスへ合わせる。
+- セットアップ後に `scripts/apply-seethrough-local-fixes.ps1` を実行し、blockswapのテキスト埋め込みをCPU側で作る互換状態を確認する。
 - 生成物は `work/psd/seethrough/`、実行ログは `logs/` に保存する。
 
 ## データ管理

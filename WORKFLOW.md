@@ -23,7 +23,7 @@
 ## 2. パーツPSDを作る
 
 1. `tools/see-through` の公式8GB向けblockswapスクリプトで、元画像から塗り足し済みの意味レイヤーPSDを生成する。
-2. このPCではRTX 5060 Laptop GPU 8GBのため、LayerDiff 1024・Depth 512・blockswapを標準設定にする。NF4のCPU offload経路は公式コードのデバイス不整合があるため予備扱いとする。
+2. このPCではRTX 5060 Laptop GPU 8GBのため、LayerDiff 1024・Depth 512・blockswapを標準設定にする。blockswapは埋め込みをCPUでキャッシュしてからテキストエンコーダを解放する。NF4のCPU offload経路は公式コードのデバイス不整合があるため予備扱いとする。
 3. 初回だけ `scripts/setup-seethrough.ps1` と `scripts/apply-seethrough-local-fixes.ps1`、生成時は `scripts/run-seethrough.ps1 -Mode blockswap` を実行する。
 4. See-through出力を `work/psd/seethrough/` に保存し、元出力を直接上書きしない。
 5. Photoshop 2026で各レイヤーを高品質拡大し、ひより基準の2976×4175キャンバスへ戻す。
@@ -62,6 +62,14 @@
 3. テクスチャ、model3.json、moc3、物理演算、モーションの参照切れがないことを確認する。
 4. PicoAgentでは上半身表示、透過背景、常時アイドル、まばたき、音声連動口パクを確認する。
 5. 起動時にコンソールが表示されず、ウィンドウが指定モニターへ出ることを確認する。
+
+### HTMLローカル動作確認ツール
+
+1. 初回だけ `viewer/setup-runtime.ps1` を実行し、このPCのPicoAgentからLive2Dランタイムをコピーする。ランタイムはGitへ追加しない。
+2. `viewer/launch-viewer.vbs` をダブルクリックする。`pythonw.exe`を使うためコマンドプロンプトは表示されない。
+3. SDK 5とSDK 4を切り替え、それぞれの`model3.json`が読めることを確認する。
+4. 上半身表示、視線追従、自動・手動まばたき、口スライダー、髪揺れ、倍率・上下位置を確認する。
+5. 読込失敗時は診断欄のエラーを記録し、`model3.json`内の参照ファイルとCore互換性を確認する。
 
 ## 5. 完了記録
 

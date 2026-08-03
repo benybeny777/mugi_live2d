@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>むぎ Live2D 動作確認</title>
+  <link rel="stylesheet" href="viewer.css">
+</head>
+<body>
+  <main>
+    <section class="stage-card">
+      <header>
+        <div><p class="eyebrow">LOCAL MODEL QA</p><h1>むぎ Live2D 動作確認</h1></div>
+        <span id="status" class="status waiting">未読込</span>
+      </header>
+      <div id="stage" aria-label="Live2Dプレビュー"></div>
+      <p class="hint">画面内でマウスを動かすと視線が追従します。初期表示は上半身です。</p>
+    </section>
+    <aside class="controls">
+      <section>
+        <h2>モデル</h2>
+        <label>互換形式<select id="sdk"><option value="sdk5">SDK 5</option><option value="sdk4">SDK 4</option></select></label>
+        <label>model3.json<input id="modelPath" value="/exports/sdk5/mugi/mugi.model3.json"></label>
+        <button id="load">モデルを読み込む</button>
+      </section>
+      <section>
+        <h2>表情・動き</h2>
+        <div class="button-grid">
+          <button id="blink">まばたき</button><button id="blinkAuto" class="toggle active">自動まばたき ON</button>
+          <button id="hair" class="toggle active">髪揺れ ON</button><button id="reset">値をリセット</button>
+        </div>
+        <label>口の開き <output id="mouthValue">0.00</output><input id="mouth" type="range" min="0" max="1" step="0.01" value="0"></label>
+        <label>表示倍率 <output id="zoomValue">1.00</output><input id="zoom" type="range" min="0.6" max="1.8" step="0.01" value="1"></label>
+        <label>上下位置 <output id="offsetValue">0</output><input id="offset" type="range" min="-300" max="300" step="1" value="0"></label>
+      </section>
+      <section>
+        <h2>診断</h2>
+        <dl><div><dt>読込形式</dt><dd id="loadedFormat">—</dd></div><div><dt>原寸</dt><dd id="dimensions">—</dd></div><div><dt>パラメータ</dt><dd id="parameterCount">—</dd></div></dl>
+        <pre id="log" aria-live="polite"></pre>
+      </section>
+    </aside>
+  </main>
+  <script src="viewer.js"></script>
+</body>
+</html>
