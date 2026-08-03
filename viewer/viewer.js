@@ -1,6 +1,7 @@
 "use strict";
 
 const runtimeScripts = ["vendor/live2dcubismcore.min.js", "vendor/pixi.min.js", "vendor/cubism4.min.js"];
+const viewerVersion = "7";
 const parameterIds = {
   eyeL: ["ParamEyeLOpen", "PARAM_EYE_L_OPEN"], eyeR: ["ParamEyeROpen", "PARAM_EYE_R_OPEN"],
   mouth: ["ParamMouthOpenY", "PARAM_MOUTH_OPEN_Y"], hairFront: ["ParamHairFront", "PARAM_HAIR_FRONT"],
@@ -22,7 +23,12 @@ function loadScript(src) {
 }
 async function ensureRuntime() {
   if (window.PIXI?.live2d?.Live2DModel) return;
-  runtimeReady ||= (async () => { for (const script of runtimeScripts) await loadScript(script); PIXI.live2d.config.sound = false; })();
+  runtimeReady ||= (async () => {
+    for (const script of runtimeScripts) await loadScript(script);
+    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.LINEAR;
+    PIXI.settings.MIPMAP_TEXTURES = PIXI.MIPMAP_MODES.OFF;
+    PIXI.live2d.config.sound = false;
+  })();
   await runtimeReady;
 }
 function resizeStage() {
@@ -30,7 +36,7 @@ function resizeStage() {
   const stage = $("stage"); app.renderer.resize(stage.clientWidth, stage.clientHeight);
   if (!model) return;
   const width = model.internalModel.originalWidth, height = model.internalModel.originalHeight;
-  baseScale = Math.min(stage.clientWidth / (width * 1.05), stage.clientHeight / (height * 0.58));
+  baseScale = stage.clientHeight / (height * 0.40);
   model.scale.set(baseScale * Number($("zoom").value)); model.anchor.set(0.5, 0);
   model.position.set(stage.clientWidth / 2, Number($("offset").value) - height * baseScale * 0.015);
 }
@@ -48,7 +54,10 @@ async function loadModel() {
     await ensureRuntime();
     if (model) { app.stage.removeChild(model); model.destroy(); }
     if (!app) {
-      app = new PIXI.Application({ width: $("stage").clientWidth, height: $("stage").clientHeight, backgroundAlpha: 0, antialias: true, resolution: window.devicePixelRatio || 1, autoDensity: true });
+      const canvas = document.createElement("canvas");
+      const contextOptions = { alpha: true, premultipliedAlpha: true, antialias: true };
+      const context = canvas.getContext("webgl2", contextOptions) || canvas.getContext("webgl", contextOptions);
+      app = new PIXI.Application({ view: canvas, context, width: $("stage").clientWidth, height: $("stage").clientHeight, transparent: true, useContextAlpha: true, backgroundAlpha: 0, antialias: true, resolution: window.devicePixelRatio || 1, autoDensity: true });
       $("stage").appendChild(app.view); app.ticker.add(updateParameters);
     }
     const path = $("modelPath").value.trim();
@@ -56,7 +65,7 @@ async function loadModel() {
     $("loadedFormat").textContent = $("sdk").value.toUpperCase();
     $("dimensions").textContent = `${model.internalModel.originalWidth} × ${model.internalModel.originalHeight}`;
     $("parameterCount").textContent = parameterCount(); $("status").className = "status ready"; $("status").textContent = "正常";
-    log(`読込成功: ${path}`);
+    log(`読込成功: ${path} (viewer ${viewerVersion})`);
   } catch (error) {
     $("status").className = "status error"; $("status").textContent = "失敗"; log(`読込失敗: ${error.message || error}`);
   }

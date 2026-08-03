@@ -60,8 +60,9 @@
 1. Cubism 5向けを `exports/sdk5/` に書き出す。
 2. Cubism 4互換向けを `exports/sdk4/` に書き出す。
 3. テクスチャ、model3.json、moc3、物理演算、モーションの参照切れがないことを確認する。
-4. PicoAgentでは上半身表示、透過背景、常時アイドル、まばたき、音声連動口パクを確認する。
-5. 起動時にコンソールが表示されず、ウィンドウが指定モニターへ出ることを確認する。
+4. `C:\00_PG\30_live\.venv\Scripts\python.exe scripts\sanitize_export_textures.py exports\sdk5 exports\sdk4` を実行し、完全透明画素に残るRGBを消してWebGLのアトラス境界漏れを防ぐ。
+5. PicoAgentでは上半身表示、透過背景、常時アイドル、まばたき、音声連動口パクを確認する。
+6. 起動時にコンソールが表示されず、ウィンドウが指定モニターへ出ることを確認する。
 
 ### HTMLローカル動作確認ツール
 

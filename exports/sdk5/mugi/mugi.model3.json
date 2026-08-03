@@ -1,0 +1,25 @@
+{
+	"Version": 3,
+	"FileReferences": {
+		"Moc": "mugi.moc3",
+		"Textures": [
+			"mugi.4096/texture_00.png",
+			"mugi.4096/texture_01.png",
+			"mugi.4096/texture_02.png"
+		],
+		"Physics": "mugi.physics3.json",
+		"DisplayInfo": "mugi.cdi3.json"
+	},
+	"Groups": [
+		{
+			"Target": "Parameter",
+			"Name": "EyeBlink",
+			"Ids": ["ParamEyeLOpen", "ParamEyeROpen"]
+		},
+		{
+			"Target": "Parameter",
+			"Name": "LipSync",
+			"Ids": ["ParamMouthOpenY"]
+		}
+	]
+}

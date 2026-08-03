@@ -21,6 +21,13 @@ REPOSITORY = Path(__file__).resolve().parents[1]
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
     """Serve repository files and keep pythonw startup silent."""
 
+    def end_headers(self) -> None:
+        """Disable caching so regenerated models and viewer code reload immediately."""
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+        super().end_headers()
+
     def log_message(self, format: str, *args: object) -> None:
         """Suppress console logging because the launcher intentionally has no console."""
 
