@@ -1,7 +1,7 @@
 "use strict";
 
 const runtimeScripts = ["vendor/live2dcubismcore.min.js", "vendor/pixi.min.js", "vendor/cubism4.min.js"];
-const viewerVersion = "8";
+const viewerVersion = "15";
 const demoMode = new URLSearchParams(location.search).get("demo") === "1";
 const parameterIds = {
   eyeL: ["ParamEyeLOpen", "PARAM_EYE_L_OPEN"], eyeR: ["ParamEyeROpen", "PARAM_EYE_R_OPEN"],
@@ -49,6 +49,16 @@ function parameterCount() {
   const core = model?.internalModel?.coreModel;
   return core?.parameters?.count ?? core?._model?.parameters?.count ?? "確認不可";
 }
+function topologyStats() {
+  const core = model?.internalModel?.coreModel;
+  const drawables = core?.drawables ?? core?._model?.drawables;
+  const counts = Array.from(drawables?.vertexCounts ?? []);
+  return {
+    total: drawables?.count ?? counts.length,
+    empty: counts.filter(count => count === 0).length,
+    flat: counts.filter(count => count === 4).length,
+  };
+}
 async function loadModel() {
   $("status").className = "status waiting"; $("status").textContent = "読込中";
   try {
@@ -56,17 +66,27 @@ async function loadModel() {
     if (model) { app.stage.removeChild(model); model.destroy(); }
     if (!app) {
       const canvas = document.createElement("canvas");
-      const contextOptions = { alpha: true, premultipliedAlpha: true, antialias: true };
+      // Cubism clipping masks require a stencil buffer. Without this the model
+      // loads successfully but masked face parts disappear in WebGL.
+      const contextOptions = { alpha: true, premultipliedAlpha: true, antialias: true, stencil: true };
       const context = canvas.getContext("webgl2", contextOptions) || canvas.getContext("webgl", contextOptions);
-      app = new PIXI.Application({ view: canvas, context, width: $("stage").clientWidth, height: $("stage").clientHeight, transparent: true, useContextAlpha: true, backgroundAlpha: 0, antialias: true, resolution: window.devicePixelRatio || 1, autoDensity: true });
+      app = new PIXI.Application({ view: canvas, context, width: $("stage").clientWidth, height: $("stage").clientHeight, transparent: true, useContextAlpha: true, backgroundAlpha: 0, antialias: true, stencil: true, resolution: window.devicePixelRatio || 1, autoDensity: true });
       $("stage").appendChild(app.view); app.ticker.add(updateParameters);
     }
     const path = $("modelPath").value.trim();
     model = await PIXI.live2d.Live2DModel.from(path, { autoInteract: false }); app.stage.addChild(model); resizeStage();
     $("loadedFormat").textContent = $("sdk").value.toUpperCase();
     $("dimensions").textContent = `${model.internalModel.originalWidth} × ${model.internalModel.originalHeight}`;
-    $("parameterCount").textContent = parameterCount(); $("status").className = "status ready"; $("status").textContent = "正常";
+    const topology = topologyStats();
+    $("parameterCount").textContent = parameterCount();
+    $("drawableCount").textContent = String(topology.total);
+    $("emptyMeshCount").textContent = String(topology.empty);
+    $("flatMeshCount").textContent = String(topology.flat);
+    const topologyOk = topology.empty <= 5 && topology.flat <= 20;
+    $("status").className = topologyOk ? "status ready" : "status error";
+    $("status").textContent = topologyOk ? "正常" : "構造NG";
     log(`読込成功: ${path} (viewer ${viewerVersion})`);
+    if (!topologyOk) log(`構造NG: 頂点0=${topology.empty}, 4頂点=${topology.flat}`);
   } catch (error) {
     $("status").className = "status error"; $("status").textContent = "失敗"; log(`読込失敗: ${error.message || error}`);
   }
