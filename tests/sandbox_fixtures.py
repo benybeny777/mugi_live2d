@@ -11,9 +11,21 @@ import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 
+from pipeline.fixedtopo import imaging
+from pipeline.sandbox import region as regions
+
 CANVAS = (200, 200)
 SKIN = (243, 214, 199)
 HAIR = (108, 82, 66)
+STONE = (150, 146, 140)
+
+#: The fixed shape a face layer is expected to fill, in fixture pixels.
+FACE_OVAL = (60, 40, 140, 160)
+
+#: Depth of the drawn rim the artist painted over the skin, in pixels. Mugi's
+#: face layer carries one about this deep relative to its size, and it is the
+#: reason an underlay borders hair tone on every side.
+RIM_DEPTH = 10.0
 
 
 def disc(canvas: tuple[int, int] = CANVAS, radius: int = 40, colour=SKIN) -> NDArray[np.uint8]:
@@ -47,6 +59,64 @@ def shaded_disc(canvas: tuple[int, int] = CANVAS, radius: int = 40) -> NDArray[n
     top = np.arange(canvas[1])[:, None] < canvas[1] / 2
     rgba[..., :3] = np.where(top[..., None], np.array(HAIR, dtype=np.uint8), rgba[..., :3])
     return rgba
+
+
+def oval_region(box: tuple[int, int, int, int] = FACE_OVAL) -> regions.Region:
+    """Return the fixed shape the underlay fixtures complete."""
+    return regions.Region("face_oval", "ellipse", box, "tests.sandbox_fixtures")
+
+
+def capped_oval(
+    canvas: tuple[int, int] = CANVAS,
+    oval: tuple[int, int, int, int] = FACE_OVAL,
+    cap: float = 0.35,
+    rim: float = RIM_DEPTH,
+) -> NDArray[np.uint8]:
+    """Return a layer shaped like Mugi's face: a fixed oval with its top missing.
+
+    The artist painted a hair-toned rim over the skin, so every edge of what
+    exists is dark. The top ``cap`` of the oval is not covered at all, which is
+    the forehead the bangs hide and no ring around the existing silhouette can
+    reach.
+    """
+    raster = (canvas[1], canvas[0])
+    inside = imaging.ellipse_mask(raster, oval)
+    _, y0, _, y1 = oval
+    covered = np.zeros(raster, dtype=bool)
+    covered[int(y0 + (y1 - y0) * cap) :, :] = True
+    present = inside & covered
+
+    rgba = np.zeros(raster + (4,), dtype=np.uint8)
+    rgba[..., :3] = np.array(SKIN, dtype=np.uint8)
+    drawn_edge = present & ~imaging.erode(present, rim)
+    rgba[..., :3] = np.where(drawn_edge[..., None], np.array(HAIR, dtype=np.uint8), rgba[..., :3])
+    rgba[..., 3] = np.where(present, 255, 0)
+    return rgba
+
+
+def underlay_mask(
+    base: NDArray[np.uint8],
+    oval: tuple[int, int, int, int] = FACE_OVAL,
+    grow: int = 0,
+) -> NDArray[np.bool_]:
+    """Return the pixels an ellipse painted *under* the layer would show through.
+
+    ``grow`` enlarges the ellipse past the shape it was given, which is what
+    the 2026-08-04 Photoshop return did.
+    """
+    x0, y0, x1, y1 = oval
+    shape = imaging.ellipse_mask(base.shape[:2], (x0 - grow, y0 - grow, x1 + grow, y1 + grow))
+    return shape & (base[..., 3] == 0)
+
+
+def underlay(
+    base: NDArray[np.uint8],
+    oval: tuple[int, int, int, int] = FACE_OVAL,
+    colour=SKIN,
+    grow: int = 0,
+) -> NDArray[np.uint8]:
+    """Return ``base`` flattened over a flat ellipse painted beneath it."""
+    return fill(base, underlay_mask(base, oval, grow), colour)
 
 
 def extend(base: NDArray[np.uint8], region: NDArray[np.bool_]) -> NDArray[np.uint8]:

@@ -13,6 +13,7 @@ from pipeline.sandbox import export as exporter
 from pipeline.sandbox import manifest as mf
 from pipeline.sandbox import psdlayer
 from pipeline.sandbox import qa as checks
+from pipeline.sandbox import region as regions
 from pipeline.sandbox import restore as restorer
 
 DEFAULT_PSD = Path("work/psd/hiyori/mugi-hiyori-compatible-clean.psd")
@@ -73,6 +74,17 @@ def _extract(args: argparse.Namespace) -> int:
     return 0
 
 
+def _region(args: argparse.Namespace) -> regions.Region | None:
+    """Return the fixed shape this sandbox completes, if it was asked for."""
+    if args.region and args.region_ellipse:
+        raise SystemExit("pass either --region or --region-ellipse, not both")
+    if args.region:
+        return regions.named(args.region, args.contract)
+    if args.region_ellipse:
+        return regions.Region("custom", "ellipse", args.region_ellipse, "--region-ellipse")
+    return None
+
+
 def _export(args: argparse.Namespace) -> int:
     """Write the Photoshop sandbox for one layer."""
     document = exporter.export(
@@ -83,7 +95,7 @@ def _export(args: argparse.Namespace) -> int:
         grow=args.grow,
         seam=args.seam,
         margin=args.margin,
-        target=args.target,
+        region=_region(args),
     )
     _emit(document, None)
     return 0
@@ -145,7 +157,14 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--grow", type=float, default=24.0, help="editable ring in pixels")
     export.add_argument("--seam", type=float, default=2.0, help="unlocked ring at the alpha edge")
     export.add_argument("--margin", type=int, default=32, help="context kept around the crop")
-    export.add_argument("--target", type=_box, help="extra editable box as x0,y0,x1,y1 on canvas")
+    export.add_argument(
+        "--region",
+        help="complete a named fixed-topology shape instead of growing the edge, e.g. face_oval",
+    )
+    export.add_argument("--contract", type=Path, default=regions.DEFAULT_CONTRACT)
+    export.add_argument(
+        "--region-ellipse", type=_box, help="an explicit ellipse as x0,y0,x1,y1 on canvas"
+    )
     export.set_defaults(handler=_export)
 
     qa = commands.add_parser("qa", help="check a returned image; never reports acceptance")

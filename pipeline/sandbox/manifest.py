@@ -90,6 +90,15 @@ class Manifest:
         """Return the sandbox ``(width, height)``."""
         return tuple(self.sandbox["size"])  # type: ignore[return-value]
 
+    @property
+    def fill_mode(self) -> str:
+        """Return how the sandbox is meant to be filled.
+
+        Sandboxes written before the underlay mode existed carry no field and
+        are all edge extensions, so that is the fallback.
+        """
+        return str(self.sandbox.get("fill_mode", "extend"))
+
     def path(self, role: str, directory: Path) -> Path:
         """Return the on-disk path of one recorded file."""
         return directory / self.files[role].name
