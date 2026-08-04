@@ -1,0 +1,717 @@
+{
+  "schema": "mugi-live2d/fixed-topology@2",
+  "id": "mugi-hiyori-v2",
+  "derived_from": {
+    "reference": "source/mugi-original.png",
+    "reference_sha256": "eafaf759d900f105de53ff036f3827dcde4cc2d8d7959a4434e2ce7e4a446d15",
+    "palette": "pipeline/palette.mugi.json",
+    "spec": "pipeline/contract-spec.mugi-hiyori-v2.json"
+  },
+  "calibration": {
+    "scale": 1.416894,
+    "scale_required_by_face_minimum": 1.362398,
+    "scale_ceiling_from_head_width": 2.643438,
+    "face_oval_source": [
+      1302,
+      282,
+      1669,
+      838
+    ],
+    "face_oval_canvas": [
+      1210,
+      397,
+      1730,
+      1185
+    ],
+    "canvas": [
+      2976,
+      4175
+    ]
+  },
+  "canvas": {
+    "width": 2976,
+    "height": 4175
+  },
+  "proportions": {
+    "face_oval_width_ratio": 1.02,
+    "face_oval_height_ratio": 1.55,
+    "crown_margin": 250,
+    "min_scale_margin": 1.04,
+    "max_head_width_ratio": 0.62
+  },
+  "anchors": {
+    "eye_left": [
+      1328.98,
+      910.5
+    ],
+    "eye_right": [
+      1612.14,
+      908.7
+    ],
+    "mouth": [
+      1467.47,
+      1071.83
+    ],
+    "chin": [
+      1470.29,
+      1185.15
+    ],
+    "crown": [
+      1488.0,
+      250.0
+    ]
+  },
+  "frame": {
+    "head": [
+      994,
+      250,
+      1982,
+      1249
+    ],
+    "torso": [
+      299,
+      1185,
+      2647,
+      4175
+    ],
+    "face_oval": [
+      1210,
+      397,
+      1730,
+      1185
+    ]
+  },
+  "regions": {
+    "Accessory": {
+      "shape": "box",
+      "box": [
+        1567,
+        210,
+        2061,
+        909
+      ]
+    },
+    "ArmL": {
+      "shape": "box",
+      "box": [
+        252,
+        1125,
+        1379,
+        4175
+      ]
+    },
+    "ArmR": {
+      "shape": "box",
+      "box": [
+        1567,
+        1125,
+        2694,
+        4175
+      ]
+    },
+    "Body": {
+      "shape": "box",
+      "box": [
+        675,
+        886,
+        2271,
+        4175
+      ]
+    },
+    "EarL": {
+      "shape": "box",
+      "box": [
+        994,
+        789,
+        1330,
+        1149
+      ]
+    },
+    "EarR": {
+      "shape": "box",
+      "box": [
+        1646,
+        789,
+        1982,
+        1149
+      ]
+    },
+    "EyeHighlightL": {
+      "shape": "box",
+      "box": [
+        1229,
+        801,
+        1429,
+        1020
+      ]
+    },
+    "EyeHighlightR": {
+      "shape": "box",
+      "box": [
+        1513,
+        799,
+        1712,
+        1019
+      ]
+    },
+    "EyeIrisL": {
+      "shape": "box",
+      "box": [
+        1229,
+        801,
+        1429,
+        1020
+      ]
+    },
+    "EyeIrisR": {
+      "shape": "box",
+      "box": [
+        1513,
+        799,
+        1712,
+        1019
+      ]
+    },
+    "EyeWhiteL": {
+      "shape": "box",
+      "box": [
+        1182,
+        773,
+        1476,
+        1048
+      ]
+    },
+    "EyeWhiteR": {
+      "shape": "box",
+      "box": [
+        1465,
+        771,
+        1759,
+        1046
+      ]
+    },
+    "EyebrowL": {
+      "shape": "box",
+      "box": [
+        1182,
+        656,
+        1476,
+        794
+      ]
+    },
+    "EyebrowR": {
+      "shape": "box",
+      "box": [
+        1465,
+        654,
+        1759,
+        792
+      ]
+    },
+    "EyelashL": {
+      "shape": "box",
+      "box": [
+        1161,
+        711,
+        1497,
+        1069
+      ]
+    },
+    "EyelashR": {
+      "shape": "box",
+      "box": [
+        1444,
+        709,
+        1780,
+        1067
+      ]
+    },
+    "Face": {
+      "shape": "ellipse",
+      "box": [
+        1210,
+        397,
+        1730,
+        1185
+      ]
+    },
+    "HairAhoge": {
+      "shape": "box",
+      "box": [
+        1271,
+        50,
+        1784,
+        450
+      ]
+    },
+    "HairBack": {
+      "shape": "box",
+      "box": [
+        915,
+        90,
+        2061,
+        1848
+      ]
+    },
+    "HairFront": {
+      "shape": "box",
+      "box": [
+        974,
+        90,
+        2002,
+        1049
+      ]
+    },
+    "HairSideL": {
+      "shape": "box",
+      "box": [
+        915,
+        200,
+        1350,
+        1649
+      ]
+    },
+    "HairSideR": {
+      "shape": "box",
+      "box": [
+        1626,
+        200,
+        2061,
+        1649
+      ]
+    },
+    "Mouth": {
+      "shape": "box",
+      "box": [
+        1348,
+        1015,
+        1587,
+        1129
+      ]
+    },
+    "MouthInner": {
+      "shape": "box",
+      "box": [
+        1379,
+        1033,
+        1556,
+        1111
+      ]
+    },
+    "Neck": {
+      "shape": "box",
+      "box": [
+        1251,
+        1129,
+        1725,
+        1589
+      ]
+    },
+    "Nose": {
+      "shape": "box",
+      "box": [
+        1369,
+        869,
+        1607,
+        1089
+      ]
+    }
+  },
+  "required_layers": [
+    "HairBack",
+    "Body",
+    "Neck",
+    "Face",
+    "EyeWhiteL",
+    "EyeWhiteR",
+    "EyeIrisL",
+    "EyeIrisR",
+    "EyelashL",
+    "EyelashR",
+    "EyebrowL",
+    "EyebrowR",
+    "Mouth",
+    "MouthInner",
+    "HairSideL",
+    "HairSideR",
+    "HairFront"
+  ],
+  "optional_layers": [
+    "ArmL",
+    "ArmR",
+    "EarL",
+    "EarR",
+    "EyeHighlightL",
+    "EyeHighlightR",
+    "Nose",
+    "HairAhoge",
+    "Accessory"
+  ],
+  "draw_order": [
+    "HairBack",
+    "Body",
+    "ArmL",
+    "ArmR",
+    "Neck",
+    "EarL",
+    "EarR",
+    "Face",
+    "EyeWhiteL",
+    "EyeWhiteR",
+    "EyeIrisL",
+    "EyeIrisR",
+    "EyeHighlightL",
+    "EyeHighlightR",
+    "EyelashL",
+    "EyelashR",
+    "EyebrowL",
+    "EyebrowR",
+    "Nose",
+    "MouthInner",
+    "Mouth",
+    "HairSideL",
+    "HairSideR",
+    "HairFront",
+    "HairAhoge",
+    "Accessory"
+  ],
+  "clipping": {
+    "EyeIrisL": "EyeWhiteL",
+    "EyeIrisR": "EyeWhiteR",
+    "EyeHighlightL": "EyeWhiteL",
+    "EyeHighlightR": "EyeWhiteR",
+    "MouthInner": "Mouth"
+  },
+  "minimum_bbox": {
+    "Face": {
+      "width": 500,
+      "height": 700
+    },
+    "Body": {
+      "width": 700,
+      "height": 1200
+    },
+    "Neck": {
+      "width": 120,
+      "height": 120
+    },
+    "HairBack": {
+      "width": 600,
+      "height": 700
+    },
+    "HairFront": {
+      "width": 400,
+      "height": 300
+    },
+    "HairSideL": {
+      "width": 60,
+      "height": 300
+    },
+    "HairSideR": {
+      "width": 60,
+      "height": 300
+    },
+    "EyeWhiteL": {
+      "width": 90,
+      "height": 60
+    },
+    "EyeWhiteR": {
+      "width": 90,
+      "height": 60
+    },
+    "EyeIrisL": {
+      "width": 60,
+      "height": 60
+    },
+    "EyeIrisR": {
+      "width": 60,
+      "height": 60
+    },
+    "EyelashL": {
+      "width": 90,
+      "height": 40
+    },
+    "EyelashR": {
+      "width": 90,
+      "height": 40
+    },
+    "EyebrowL": {
+      "width": 70,
+      "height": 12
+    },
+    "EyebrowR": {
+      "width": 70,
+      "height": 12
+    },
+    "Mouth": {
+      "width": 40,
+      "height": 6
+    },
+    "MouthInner": {
+      "width": 40,
+      "height": 20
+    }
+  },
+  "minimum_pixels": {
+    "Face": 200000,
+    "Body": 400000,
+    "Neck": 15000,
+    "HairBack": 300000,
+    "HairFront": 60000,
+    "HairSideL": 15000,
+    "HairSideR": 15000,
+    "EyeWhiteL": 4000,
+    "EyeWhiteR": 4000,
+    "EyeIrisL": 2500,
+    "EyeIrisR": 2500,
+    "EyelashL": 1200,
+    "EyelashR": 1200,
+    "EyebrowL": 600,
+    "EyebrowR": 600,
+    "Mouth": 200,
+    "MouthInner": 800
+  },
+  "containment": [
+    {
+      "inner": "EyeIrisL",
+      "outer": "EyeWhiteL",
+      "min_ratio": 0.95
+    },
+    {
+      "inner": "EyeIrisR",
+      "outer": "EyeWhiteR",
+      "min_ratio": 0.95
+    },
+    {
+      "inner": "EyeHighlightL",
+      "outer": "EyeWhiteL",
+      "min_ratio": 0.9
+    },
+    {
+      "inner": "EyeHighlightR",
+      "outer": "EyeWhiteR",
+      "min_ratio": 0.9
+    },
+    {
+      "inner": "MouthInner",
+      "outer": "Mouth",
+      "min_ratio": 0.9
+    },
+    {
+      "inner": "EyeWhiteL",
+      "outer": "Face",
+      "min_ratio": 0.98
+    },
+    {
+      "inner": "EyeWhiteR",
+      "outer": "Face",
+      "min_ratio": 0.98
+    }
+  ],
+  "overlap": [
+    {
+      "a": "HairFront",
+      "b": "HairBack",
+      "min_pixels": 20000
+    },
+    {
+      "a": "HairSideL",
+      "b": "HairBack",
+      "min_pixels": 8000
+    },
+    {
+      "a": "HairSideR",
+      "b": "HairBack",
+      "min_pixels": 8000
+    },
+    {
+      "a": "HairFront",
+      "b": "Face",
+      "min_pixels": 20000
+    },
+    {
+      "a": "Neck",
+      "b": "Body",
+      "min_pixels": 4000
+    },
+    {
+      "a": "Neck",
+      "b": "Face",
+      "min_pixels": 2000
+    }
+  ],
+  "seams": [
+    {
+      "a": "HairFront",
+      "b": "HairSideL",
+      "underlay": "HairBack",
+      "radius": 6,
+      "max_gap_pixels": 0
+    },
+    {
+      "a": "HairFront",
+      "b": "HairSideR",
+      "underlay": "HairBack",
+      "radius": 6,
+      "max_gap_pixels": 0
+    },
+    {
+      "a": "HairFront",
+      "b": "Face",
+      "underlay": "Face",
+      "radius": 6,
+      "max_gap_pixels": 0
+    },
+    {
+      "a": "HairSideL",
+      "b": "Face",
+      "underlay": "Face",
+      "radius": 6,
+      "max_gap_pixels": 0
+    },
+    {
+      "a": "HairSideR",
+      "b": "Face",
+      "underlay": "Face",
+      "radius": 6,
+      "max_gap_pixels": 0
+    },
+    {
+      "a": "Face",
+      "b": "Body",
+      "underlay": "Neck",
+      "radius": 6,
+      "max_gap_pixels": 0
+    }
+  ],
+  "envelopes": {
+    "default": {
+      "tolerance": 6,
+      "max_outside_pixels": 0,
+      "min_fill": 0.0
+    },
+    "Face": {
+      "min_fill": 0.8
+    },
+    "EyeWhiteL": {
+      "min_fill": 0.25
+    },
+    "EyeWhiteR": {
+      "min_fill": 0.25
+    },
+    "EyeIrisL": {
+      "min_fill": 0.3
+    },
+    "EyeIrisR": {
+      "min_fill": 0.3
+    },
+    "HairFront": {
+      "min_fill": 0.25
+    },
+    "HairBack": {
+      "min_fill": 0.3
+    }
+  },
+  "islands": {
+    "default": {
+      "min_area": 400,
+      "max_extra": 6
+    },
+    "Face": {
+      "max_extra": 0
+    },
+    "Neck": {
+      "max_extra": 0
+    },
+    "EyeWhiteL": {
+      "max_extra": 0
+    },
+    "EyeWhiteR": {
+      "max_extra": 0
+    },
+    "EyeIrisL": {
+      "max_extra": 0
+    },
+    "EyeIrisR": {
+      "max_extra": 0
+    },
+    "MouthInner": {
+      "max_extra": 0
+    }
+  },
+  "reference_landmarks": {
+    "canvas": [
+      2976,
+      4175
+    ],
+    "subject": [
+      659,
+      92,
+      2316,
+      3997
+    ],
+    "head": [
+      1149,
+      92,
+      1847,
+      883
+    ],
+    "head_core": [
+      1149,
+      178,
+      1847,
+      883
+    ],
+    "face": [
+      1306,
+      493,
+      1665,
+      837
+    ],
+    "eye_left": [
+      1385.771,
+      644.158
+    ],
+    "eye_right": [
+      1585.617,
+      642.891
+    ],
+    "eye_left_box": [
+      1349,
+      596,
+      1423,
+      693
+    ],
+    "eye_right_box": [
+      1548,
+      594,
+      1625,
+      692
+    ],
+    "mouth": [
+      1483.511,
+      758.023
+    ],
+    "mouth_box": [
+      1456,
+      755,
+      1516,
+      762
+    ],
+    "chin": [
+      1485.5,
+      838.0
+    ],
+    "crown": [
+      1498.0,
+      178.0
+    ],
+    "quality": {
+      "eye_area_ratio": 0.1455,
+      "eye_balance": 0.9636,
+      "mouth_pixels": 88.0,
+      "face_pixels": 81629.0,
+      "hair_pixels": 466165.0
+    }
+  }
+}

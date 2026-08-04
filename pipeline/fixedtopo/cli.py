@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from pipeline.fixedtopo import calibrate as calibration
-from pipeline.fixedtopo import imaging
+from pipeline.fixedtopo import candidates, imaging
 from pipeline.fixedtopo import landmarks as lm
 from pipeline.fixedtopo.palette import Palette
 
@@ -43,6 +43,13 @@ def _calibrate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _normalize(args: argparse.Namespace) -> int:
+    """Generate the three deterministic framing candidates."""
+    document = candidates.generate(args.image, args.contract, args.palette, args.out)
+    _emit(document, None)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Return the command line parser."""
     parser = argparse.ArgumentParser(
@@ -63,6 +70,13 @@ def build_parser() -> argparse.ArgumentParser:
     calibrate.add_argument("--palette", type=Path, default=DEFAULT_PALETTE)
     calibrate.add_argument("--out", type=Path, default=DEFAULT_CONTRACT)
     calibrate.set_defaults(handler=_calibrate)
+
+    normalise = commands.add_parser("normalize", help="write three deterministic candidates")
+    normalise.add_argument("image", type=Path)
+    normalise.add_argument("--contract", type=Path, default=DEFAULT_CONTRACT)
+    normalise.add_argument("--palette", type=Path, default=DEFAULT_PALETTE)
+    normalise.add_argument("--out", type=Path, required=True)
+    normalise.set_defaults(handler=_normalize)
 
     return parser
 
