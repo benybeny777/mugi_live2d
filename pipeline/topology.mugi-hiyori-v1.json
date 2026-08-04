@@ -1,0 +1,32 @@
+{
+  "schema": "mugi-live2d/fixed-topology@1",
+  "id": "mugi-hiyori-v1",
+  "canvas": { "width": 2976, "height": 4175 },
+  "required_layers": [
+    "HairBack", "Body", "Neck", "Face", "EyeWhiteL", "EyeWhiteR",
+    "EyeIrisL", "EyeIrisR", "EyelashL", "EyelashR", "EyebrowL",
+    "EyebrowR", "Mouth", "MouthInner", "HairSideL", "HairSideR",
+    "HairFront"
+  ],
+  "optional_layers": [
+    "ArmL", "ArmR", "EarL", "EarR", "EyeHighlightL", "EyeHighlightR",
+    "EyeSmileL", "EyeSmileR", "MouthUpper", "MouthLower",
+    "MouthHighlight", "Nose", "HairTipL", "HairTipR", "HairAhoge",
+    "Accessory"
+  ],
+  "containment": [
+    { "inner": "EyeIrisL", "outer": "EyeWhiteL", "min_ratio": 0.95 },
+    { "inner": "EyeIrisR", "outer": "EyeWhiteR", "min_ratio": 0.95 }
+  ],
+  "overlap": [
+    { "a": "HairFront", "b": "HairBack", "min_pixels": 300 },
+    { "a": "HairSideL", "b": "HairBack", "min_pixels": 150 },
+    { "a": "HairSideR", "b": "HairBack", "min_pixels": 150 },
+    { "a": "Neck", "b": "Body", "min_pixels": 150 }
+  ],
+  "minimum_bbox": {
+    "Face": { "width": 500, "height": 700 },
+    "Body": { "width": 700, "height": 1200 },
+    "Mouth": { "width": 20, "height": 5 }
+  }
+}
