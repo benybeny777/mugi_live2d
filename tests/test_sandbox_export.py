@@ -97,13 +97,22 @@ class NamedRegionTest(unittest.TestCase):
         self.assertEqual(face.box, (1302, 282, 1669, 838))
         self.assertIn("calibration.face_oval_source", face.origin)
 
+    def test_the_forehead_is_the_source_oval_clipped_above_the_cheeks(self) -> None:
+        forehead = regions.named("face_forehead")
+        self.assertEqual(forehead.box, (1302, 282, 1669, 838))
+        self.assertEqual(forehead.clip, (0, 0, 2976, 430))
+        mask = forehead.mask((4175, 2976))
+        self.assertTrue(mask[:430].any())
+        self.assertFalse(mask[430:].any())
+        self.assertIn("face_forehead_clip_source", forehead.origin)
+
     def test_an_unknown_region_names_the_ones_that_exist(self) -> None:
         with self.assertRaises(ValueError) as raised:
             regions.named("elbow")
         self.assertIn("face_oval", str(raised.exception))
 
     def test_a_region_survives_the_manifest_round_trip(self) -> None:
-        face = regions.named("face_oval").shifted(-100, -50)
+        face = regions.named("face_forehead").shifted(-100, -50)
         self.assertEqual(regions.from_json(face.to_json()), face)
         self.assertIsNone(regions.from_json(None))
 

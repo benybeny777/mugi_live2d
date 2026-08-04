@@ -6,6 +6,7 @@
   "proportions": {
     "face_oval_width_ratio": 1.02,
     "face_oval_height_ratio": 1.55,
+    "face_forehead_height_ratio": 0.266187,
     "crown_margin": 250,
     "min_scale_margin": 1.04,
     "max_head_width_ratio": 0.62

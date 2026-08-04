@@ -78,6 +78,17 @@ def frame_transform(
         "scale_required_by_face_minimum": round(needed, 6),
         "scale_ceiling_from_head_width": round(ceiling, 6),
         "face_oval_source": list(oval),
+        "face_forehead_clip_source": [
+            0,
+            0,
+            canvas_width,
+            int(
+                round(
+                    oval[1]
+                    + (oval[3] - oval[1]) * proportions["face_forehead_height_ratio"]
+                )
+            ),
+        ],
         "face_oval_canvas": list(transform.apply_box(oval)),
         "canvas": [canvas_width, canvas_height],
     }

@@ -19,7 +19,7 @@ uv run python -m pipeline.sandbox list
 
 # 2. sandbox書き出し（顔の例）
 uv run python -m pipeline.sandbox export "/顔/顔" `
-  --out work/sandbox --id face --region face_oval --grow 12 --margin 24
+  --out work/sandbox --id face --region face_forehead --grow 12 --margin 24
 
 # 3. CodexがPhotoshopで生成し work/sandbox/face/filled.png を保存
 
@@ -43,9 +43,9 @@ manifestの `sandbox.fill_mode` が、その sandbox がどちらの作業かを
 | `extend` | 既存シルエットの外側 `grow` px のリング | 隣接している既存の絵の色 | 輪郭を少し伸ばす |
 | `underlay` | 固定形状のうちレイヤーが未到達の部分＋その隙間が必要とする外側の縫い代 | レイヤーのベース色（`sandbox.base_colour`） | 既存の絵の**下**に下地を敷く |
 
-顔は `underlay` です。前髪に隠れて額が存在しないので、既存の縁から何px広げてもそこには届きません。`--region face_oval` で固定トポロジー契約の顔楕円を境界にします。
+顔は `underlay` です。前髪に隠れて額が存在しないので、既存の縁から何px広げてもそこには届きません。`--region face_forehead` で固定トポロジー契約の顔楕円上部だけを境界にします。
 
-境界は `pipeline/topology.mugi-hiyori-v2.json` の `calibration.face_oval_source`（= `[1302, 282, 1669, 838]`）から読みます。同ファイルの `frame.face_oval` はリターゲット後のcanvas座標なので、現行の `mugi-hiyori-compatible-clean.psd` に当てるとcalibration倍率ぶんずれます。使いません。
+境界は `pipeline/topology.mugi-hiyori-v2.json` の `calibration.face_oval_source`（= `[1302, 282, 1669, 838]`）を、`face_forehead_clip_source`（y `< 430`）で切った領域です。全楕円を使うと頬の半透明な縁の背後まで肌色が入り、全身合成で暗い帯が見えたため不採用にしました。切断位置は spec の `face_forehead_height_ratio` から再計算されます。同ファイルの `frame.face_oval` はリターゲット後のcanvas座標なので、現行の `mugi-hiyori-compatible-clean.psd` には使いません。
 
 `--region` を付けない場合は従来どおり `extend` です。
 
@@ -54,13 +54,13 @@ manifestの `sandbox.fill_mode` が、その sandbox がどちらの作業かを
 `manifest.json` の `rules` に同じことが英語で入っています。数値はすべて再export後の実測値です。
 
 1. `work/sandbox/face/base.png` と `work/sandbox/face/editable.png` の2枚だけを開きます。原PSDは開きません。
-2. `base.png` をアクティブにして「選択範囲 > 選択範囲を読み込む」、ソース書類に `editable.png` を選びます。これが生成可能な全範囲です（80155px）。
+2. `base.png` をアクティブにして「選択範囲 > 選択範囲を読み込む」、ソース書類に `editable.png` を選びます。これが生成可能な全範囲です（42,881px）。
 3. 既存レイヤーの**下**に新規レイヤーを作ります。
 4. 選択範囲を `sandbox.base_colour` の色で塗りつぶします（`#FEEFDB`）。1色のみで、輪郭線・縁の陰・グラデーション・ハイライトは描きません。縁取りは上のレイヤーに既にあります。
 5. 楕円を描き足したり、選択範囲を広げたり、「見栄えのために」形を大きくしたりはしません。選択範囲の外に出た画素はすべて `silhouette` で落ちます。
 6. `filled.png` としてPNG書き出し（透明度あり、100%、437×627px）。書き出し時のflattenは想定内です。`base.png` は上書きしません。
 
-`--region face_oval` を使うと、生成範囲は「顔楕円のうちレイヤーが未到達の部分」＋「その隙間が楕円の外側で必要とする縫い代 `--grow` px」だけになります。既に描き上がっている輪郭にはリングが付かないので、シルエットが外側へ育つことはありません。
+`--region face_forehead` を使うと、生成範囲は「顔楕円上部のうちレイヤーが未到達の部分」＋「その隙間が必要とする縫い代 `--grow` px」だけになります。既に描き上がっている頬・顎には下地もリングも付かないので、元の合成結果を変えません。
 
 ## sandboxの中身
 
@@ -129,6 +129,19 @@ Photoshopで既存FaceBaseの**下**に肌色 `#FAEBD7` の楕円を敷いた戻
 | `colour_match` | ok（上表） |
 
 色・平坦さ・周期性・アルファはすべて合格で、落ちているのは形だけです。楕円が契約の顔楕円より全周で約20px大きく、上辺は40px以上高い位置にあります。生成物ではなく手描きの楕円なので、選択範囲どおりに描き直せば通ります。
+
+その後、全楕円を選択範囲どおりに塗った候補は画素QAには通りましたが、PSD全身合成で頬の半透明縁が暗い帯として見えたため目視不合格にしました。最終採用した `face_forehead` は額だけを塗り、次を満たします。
+
+| 項目 | 実測 |
+| --- | --- |
+| 生成画素 | 42,881px |
+| 許可範囲外 | 0px |
+| ロック画素変更 | 0 / 70,264px |
+| 色距離 median / p95 | 0 / 0 |
+| QA | `review_required` → Codex目視後 `approved` |
+| 完成顔 bbox | `(1295, 270, 1673, 845)` |
+
+PSDには完成顔PNGで元レイヤーを置換せず、追加された額の画素だけを元の `/顔/顔` の直下へ入れます。元レイヤーのマスク・半透明縁・合成条件を保つためです。
 
 石材状・布地状の生成結果は引き続き拒否します。`UnderlayTest` に、下地としての石材色（`colour_match`）と織り目（`texture_flatness` + `pattern_free`）の両方を固定しています。
 
