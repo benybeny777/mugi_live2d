@@ -24,5 +24,7 @@ scripts/__pycache__/
 tests/__pycache__/
 pipeline/__pycache__/
 pipeline/fixedtopo/__pycache__/
+pipeline/sandbox/__pycache__/
 work/qa/
+work/sandbox/
 temp/
