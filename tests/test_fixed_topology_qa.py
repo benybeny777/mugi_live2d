@@ -15,12 +15,20 @@ class FixedTopologyQaTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             topology = root / "topology.json"
-            topology.write_text(json.dumps({
-                "id": "test", "canvas": {"width": 100, "height": 100},
-                "required_layers": ["Face", "HairFront"], "optional_layers": [],
-                "minimum_bbox": {"Face": {"width": 50, "height": 50}},
-                "containment": [], "overlap": []
-            }), encoding="utf-8")
+            topology.write_text(
+                json.dumps(
+                    {
+                        "id": "test",
+                        "canvas": {"width": 100, "height": 100},
+                        "required_layers": ["Face", "HairFront"],
+                        "optional_layers": [],
+                        "minimum_bbox": {"Face": {"width": 50, "height": 50}},
+                        "containment": [],
+                        "overlap": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
             image = Image.new("RGBA", (100, 100))
             ImageDraw.Draw(image).rectangle((10, 10, 20, 20), fill="white")
             image.save(root / "Face.png")

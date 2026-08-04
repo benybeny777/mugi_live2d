@@ -1,0 +1,151 @@
+{
+  "schema": "mugi-live2d/fixed-topology-spec@1",
+  "id": "mugi-hiyori-v2",
+  "note": "Reviewed input to calibration. Ratios are fractions of the measured head frame (crown to jaw, hair-inclusive width) or the torso frame (jaw to canvas bottom, subject width). Feature boxes are multiples of the measured iris box or of the calibrated face-oval width.",
+  "canvas": { "width": 2976, "height": 4175 },
+  "proportions": {
+    "face_oval_width_ratio": 1.02,
+    "face_oval_height_ratio": 1.55,
+    "crown_margin": 250,
+    "min_scale_margin": 1.04,
+    "max_head_width_ratio": 0.62
+  },
+  "required_layers": [
+    "HairBack", "Body", "Neck", "Face", "EyeWhiteL", "EyeWhiteR",
+    "EyeIrisL", "EyeIrisR", "EyelashL", "EyelashR", "EyebrowL",
+    "EyebrowR", "Mouth", "MouthInner", "HairSideL", "HairSideR",
+    "HairFront"
+  ],
+  "optional_layers": [
+    "ArmL", "ArmR", "EarL", "EarR", "EyeHighlightL", "EyeHighlightR",
+    "Nose", "HairAhoge", "Accessory"
+  ],
+  "draw_order": [
+    "HairBack", "Body", "ArmL", "ArmR", "Neck", "EarL", "EarR", "Face",
+    "EyeWhiteL", "EyeWhiteR", "EyeIrisL", "EyeIrisR", "EyeHighlightL",
+    "EyeHighlightR", "EyelashL", "EyelashR", "EyebrowL", "EyebrowR",
+    "Nose", "MouthInner", "Mouth", "HairSideL", "HairSideR", "HairFront",
+    "HairAhoge", "Accessory"
+  ],
+  "clipping": {
+    "EyeIrisL": "EyeWhiteL",
+    "EyeIrisR": "EyeWhiteR",
+    "EyeHighlightL": "EyeWhiteL",
+    "EyeHighlightR": "EyeWhiteR",
+    "MouthInner": "Mouth"
+  },
+  "head_regions": {
+    "HairBack":   { "ratios": [-0.08, -0.16, 1.08, 1.60] },
+    "HairFront":  { "ratios": [-0.02, -0.16, 1.02, 0.80] },
+    "HairSideL":  { "ratios": [-0.08, -0.05, 0.36, 1.40] },
+    "HairSideR":  { "ratios": [0.64, -0.05, 1.08, 1.40] },
+    "HairAhoge":  { "ratios": [0.28, -0.20, 0.80, 0.20] },
+    "EarL":       { "ratios": [0.00, 0.54, 0.34, 0.90] },
+    "EarR":       { "ratios": [0.66, 0.54, 1.00, 0.90] },
+    "Nose":       { "ratios": [0.38, 0.62, 0.62, 0.84] },
+    "Neck":       { "ratios": [0.26, 0.88, 0.74, 1.34] },
+    "Accessory":  { "ratios": [0.58, -0.04, 1.08, 0.66] }
+  },
+  "torso_regions": {
+    "Body": { "ratios": [0.16, -0.10, 0.84, 1.00] },
+    "ArmL": { "ratios": [-0.02, -0.02, 0.46, 1.00] },
+    "ArmR": { "ratios": [0.54, -0.02, 1.02, 1.00] }
+  },
+  "feature_regions": {
+    "EyeWhiteL":     { "anchor": "eye_left",  "unit": "iris", "scale": [2.8, 2.0] },
+    "EyeWhiteR":     { "anchor": "eye_right", "unit": "iris", "scale": [2.8, 2.0] },
+    "EyeIrisL":      { "anchor": "eye_left",  "unit": "iris", "scale": [1.9, 1.6] },
+    "EyeIrisR":      { "anchor": "eye_right", "unit": "iris", "scale": [1.9, 1.6] },
+    "EyeHighlightL": { "anchor": "eye_left",  "unit": "iris", "scale": [1.9, 1.6] },
+    "EyeHighlightR": { "anchor": "eye_right", "unit": "iris", "scale": [1.9, 1.6] },
+    "EyelashL":      { "anchor": "eye_left",  "unit": "iris", "scale": [3.2, 2.6], "offset": [0.0, -0.15] },
+    "EyelashR":      { "anchor": "eye_right", "unit": "iris", "scale": [3.2, 2.6], "offset": [0.0, -0.15] },
+    "EyebrowL":      { "anchor": "eye_left",  "unit": "iris", "scale": [2.8, 1.0], "offset": [0.0, -1.35] },
+    "EyebrowR":      { "anchor": "eye_right", "unit": "iris", "scale": [2.8, 1.0], "offset": [0.0, -1.35] },
+    "Mouth":         { "anchor": "mouth", "unit": "face_width", "scale": [0.46, 0.22] },
+    "MouthInner":    { "anchor": "mouth", "unit": "face_width", "scale": [0.34, 0.15] }
+  },
+  "minimum_bbox": {
+    "Face": { "width": 500, "height": 700 },
+    "Body": { "width": 700, "height": 1200 },
+    "Neck": { "width": 120, "height": 120 },
+    "HairBack": { "width": 600, "height": 700 },
+    "HairFront": { "width": 400, "height": 300 },
+    "HairSideL": { "width": 60, "height": 300 },
+    "HairSideR": { "width": 60, "height": 300 },
+    "EyeWhiteL": { "width": 90, "height": 60 },
+    "EyeWhiteR": { "width": 90, "height": 60 },
+    "EyeIrisL": { "width": 60, "height": 60 },
+    "EyeIrisR": { "width": 60, "height": 60 },
+    "EyelashL": { "width": 90, "height": 40 },
+    "EyelashR": { "width": 90, "height": 40 },
+    "EyebrowL": { "width": 70, "height": 12 },
+    "EyebrowR": { "width": 70, "height": 12 },
+    "Mouth": { "width": 40, "height": 6 },
+    "MouthInner": { "width": 40, "height": 20 }
+  },
+  "minimum_pixels": {
+    "Face": 200000,
+    "Body": 400000,
+    "Neck": 15000,
+    "HairBack": 300000,
+    "HairFront": 60000,
+    "HairSideL": 15000,
+    "HairSideR": 15000,
+    "EyeWhiteL": 4000,
+    "EyeWhiteR": 4000,
+    "EyeIrisL": 2500,
+    "EyeIrisR": 2500,
+    "EyelashL": 1200,
+    "EyelashR": 1200,
+    "EyebrowL": 600,
+    "EyebrowR": 600,
+    "Mouth": 200,
+    "MouthInner": 800
+  },
+  "containment": [
+    { "inner": "EyeIrisL", "outer": "EyeWhiteL", "min_ratio": 0.95 },
+    { "inner": "EyeIrisR", "outer": "EyeWhiteR", "min_ratio": 0.95 },
+    { "inner": "EyeHighlightL", "outer": "EyeWhiteL", "min_ratio": 0.90 },
+    { "inner": "EyeHighlightR", "outer": "EyeWhiteR", "min_ratio": 0.90 },
+    { "inner": "MouthInner", "outer": "Mouth", "min_ratio": 0.90 },
+    { "inner": "EyeWhiteL", "outer": "Face", "min_ratio": 0.98 },
+    { "inner": "EyeWhiteR", "outer": "Face", "min_ratio": 0.98 }
+  ],
+  "overlap": [
+    { "a": "HairFront", "b": "HairBack", "min_pixels": 20000 },
+    { "a": "HairSideL", "b": "HairBack", "min_pixels": 8000 },
+    { "a": "HairSideR", "b": "HairBack", "min_pixels": 8000 },
+    { "a": "HairFront", "b": "Face", "min_pixels": 20000 },
+    { "a": "Neck", "b": "Body", "min_pixels": 4000 },
+    { "a": "Neck", "b": "Face", "min_pixels": 2000 }
+  ],
+  "seams": [
+    { "a": "HairFront", "b": "HairSideL", "underlay": "HairBack", "radius": 6, "max_gap_pixels": 0 },
+    { "a": "HairFront", "b": "HairSideR", "underlay": "HairBack", "radius": 6, "max_gap_pixels": 0 },
+    { "a": "HairFront", "b": "Face", "underlay": "Face", "radius": 6, "max_gap_pixels": 0 },
+    { "a": "HairSideL", "b": "Face", "underlay": "Face", "radius": 6, "max_gap_pixels": 0 },
+    { "a": "HairSideR", "b": "Face", "underlay": "Face", "radius": 6, "max_gap_pixels": 0 },
+    { "a": "Face", "b": "Body", "underlay": "Neck", "radius": 6, "max_gap_pixels": 0 }
+  ],
+  "envelopes": {
+    "default": { "tolerance": 6, "max_outside_pixels": 0, "min_fill": 0.0 },
+    "Face": { "min_fill": 0.80 },
+    "EyeWhiteL": { "min_fill": 0.25 },
+    "EyeWhiteR": { "min_fill": 0.25 },
+    "EyeIrisL": { "min_fill": 0.30 },
+    "EyeIrisR": { "min_fill": 0.30 },
+    "HairFront": { "min_fill": 0.25 },
+    "HairBack": { "min_fill": 0.30 }
+  },
+  "islands": {
+    "default": { "min_area": 400, "max_extra": 6 },
+    "Face": { "max_extra": 0 },
+    "Neck": { "max_extra": 0 },
+    "EyeWhiteL": { "max_extra": 0 },
+    "EyeWhiteR": { "max_extra": 0 },
+    "EyeIrisL": { "max_extra": 0 },
+    "EyeIrisR": { "max_extra": 0 },
+    "MouthInner": { "max_extra": 0 }
+  }
+}

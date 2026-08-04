@@ -56,7 +56,12 @@ def validate(layers: Path, topology_path: Path) -> dict[str, Any]:
             failures.append(f"empty layer: {name}")
             continue
         masks[name] = mask
-        records[name] = {"file": path.name, "sha256": digest(path), "alpha_pixels": count, "bbox": list(bbox)}
+        records[name] = {
+            "file": path.name,
+            "sha256": digest(path),
+            "alpha_pixels": count,
+            "bbox": list(bbox),
+        }
 
     for name, limits in topology.get("minimum_bbox", {}).items():
         if name not in records:
@@ -64,7 +69,9 @@ def validate(layers: Path, topology_path: Path) -> dict[str, Any]:
         x0, y0, x1, y1 = records[name]["bbox"]
         width, height = x1 - x0, y1 - y0
         if width < limits["width"] or height < limits["height"]:
-            failures.append(f"{name}: bbox {width}x{height} below {limits['width']}x{limits['height']}")
+            failures.append(
+                f"{name}: bbox {width}x{height} below {limits['width']}x{limits['height']}"
+            )
 
     for rule in topology.get("containment", []):
         inner, outer = masks.get(rule["inner"]), masks.get(rule["outer"])
@@ -73,7 +80,11 @@ def validate(layers: Path, topology_path: Path) -> dict[str, Any]:
         inside = pixels(ImageChops.multiply(inner, outer))
         ratio = inside / max(1, pixels(inner))
         if ratio < rule["min_ratio"]:
-            failures.append(f"{rule['inner']} containment in {rule['outer']}: {ratio:.3f} < {rule['min_ratio']:.3f}")
+            detail = (
+                f"{rule['inner']} containment in {rule['outer']}: "
+                f"{ratio:.3f} < {rule['min_ratio']:.3f}"
+            )
+            failures.append(detail)
 
     for rule in topology.get("overlap", []):
         left, right = masks.get(rule["a"]), masks.get(rule["b"])
@@ -100,15 +111,23 @@ def validate(layers: Path, topology_path: Path) -> dict[str, Any]:
 
 def write_html(report: dict[str, Any], path: Path) -> None:
     rows = "".join(
-        f"<tr><td>{html.escape(name)}</td><td>{value['alpha_pixels']}</td><td>{' × '.join(map(str, value['bbox']))}</td></tr>"
+        "<tr>"
+        f"<td>{html.escape(name)}</td>"
+        f"<td>{value['alpha_pixels']}</td>"
+        f"<td>{' × '.join(map(str, value['bbox']))}</td>"
+        "</tr>"
         for name, value in sorted(report["layers"].items())
     )
-    issues = "".join(f"<li>{html.escape(item)}</li>" for item in report["failures"] + report["warnings"])
+    issues = "".join(
+        f"<li>{html.escape(item)}</li>" for item in report["failures"] + report["warnings"]
+    )
     status = "PASS" if report["passed"] else "FAIL"
     path.write_text(
         "<!doctype html><meta charset=utf-8><title>Fixed topology QA</title>"
-        "<style>body{font:16px system-ui;max-width:960px;margin:40px auto}table{border-collapse:collapse;width:100%}"
-        "td,th{border:1px solid #bbb;padding:6px;text-align:left}.PASS{color:#187a32}.FAIL{color:#b42318}</style>"
+        "<style>body{font:16px system-ui;max-width:960px;margin:40px auto}"
+        "table{border-collapse:collapse;width:100%}"
+        "td,th{border:1px solid #bbb;padding:6px;text-align:left}"
+        ".PASS{color:#187a32}.FAIL{color:#b42318}</style>"
         f"<h1 class={status}>{status}: {html.escape(report['topology'])}</h1><ul>{issues}</ul>"
         f"<table><tr><th>Layer</th><th>Alpha pixels</th><th>Bounding box</th></tr>{rows}</table>",
         encoding="utf-8",
@@ -118,7 +137,9 @@ def write_html(report: dict[str, Any], path: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("layers", type=Path)
-    parser.add_argument("--topology", type=Path, default=Path("pipeline/topology.mugi-hiyori-v1.json"))
+    parser.add_argument(
+        "--topology", type=Path, default=Path("pipeline/topology.mugi-hiyori-v1.json")
+    )
     parser.add_argument("--json", type=Path)
     parser.add_argument("--html", type=Path)
     args = parser.parse_args()

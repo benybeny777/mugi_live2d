@@ -1,0 +1,13 @@
+{
+  "schema": "mugi-live2d/palette@1",
+  "id": "mugi",
+  "note": "Measured from source/mugi-original.png. Skin sits above value 0.80, hair around 0.45, irises are the only strongly saturated cyan-green, and line art stays below value 0.32.",
+  "families": {
+    "skin": { "hue": [5, 48], "saturation": [0.02, 0.42], "value": [0.80, 1.0] },
+    "hair": { "hue": [2, 55], "saturation": [0.14, 0.62], "value": [0.16, 0.78] },
+    "iris": { "hue": [120, 215], "saturation": [0.28, 1.0], "value": [0.04, 1.0] },
+    "line": { "hue": [0, 360], "saturation": [0.0, 1.0], "value": [0.0, 0.32] },
+    "lip": { "hue": [330, 40], "saturation": [0.16, 0.95], "value": [0.40, 1.0] },
+    "white": { "hue": [0, 360], "saturation": [0.0, 0.14], "value": [0.86, 1.0] }
+  }
+}
