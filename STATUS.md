@@ -1,6 +1,16 @@
 # 制作状況
 
-最終更新: 2026-08-03 18:15 JST
+最終更新: 2026-08-04 JST
+
+## A方式（固定トポロジー）の進捗
+
+- 固定契約: `pipeline/topology.mugi-hiyori-v2.json`
+- 計測・校正・正規化CLI: `python -m pipeline.fixedtopo`
+- 3候補（compact / balanced / close）を同一入力から決定的に生成可能
+- balancedの顔・目・口アンカー残差: 最大0.003px未満
+- 23ユニットテスト、Ruff、CLI起動: 合格
+- README動画と `viewer/` は保護・回帰確認済み
+- 現在は合成画像の正規化まで。固定レイヤーPNG/PSD生成とCubism適用は未完了
 
 ## 今回のチェックポイント
 
@@ -22,11 +32,11 @@
 
 ## 再開位置
 
-1. Cubismを1つだけ起動し、`mugi-hiyori-rigged-final.cmo3` を開く。
-2. `mugi-hiyori-compatible-final.psd` を既存モデルへ「追加・差し替え」で再インポートする。
-3. SDK 5.3とSDK 4.2を再出力し、HTML viewerで髪境界、まばたき、口パク、髪揺れを比較する。
-4. PicoAgent実アプリでSDK 5優先読込、SDK 4フォールバック、まばたき、口パクを最終目視確認する。
-5. 手順と状況を更新して最終commit/pushする。
+1. balanced候補を固定マスクへ分解し、隠れた額・後髪・口内を補完する。
+2. v2契約の境界、包含、髪の継ぎ目QAを通す。
+3. 合格PSDだけをマスターCMO3へ再インポートする。
+4. SDK 5.3/4.2を書き出し、HTML viewerで髪境界、まばたき、口パク、髪揺れを比較する。
+5. PicoAgent実アプリで最終目視確認する。
 
 ## 注意
 
