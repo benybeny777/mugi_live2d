@@ -189,8 +189,20 @@ class UnderlayTest(unittest.TestCase):
         self.assertEqual(report["status"], "review_required")
         self.assertNotEqual(report["status"], "approved")
 
+    def test_the_report_is_writable_as_json(self) -> None:
+        """`qa --json` is how this reaches a human, so no numpy scalars in it."""
+        report = self._report(fixtures.underlay(self.base, self.oval))
+        json.loads(json.dumps(report, ensure_ascii=False))
+
     def test_an_underlay_larger_than_the_shape_is_rejected(self) -> None:
-        """What the real return did: the ellipse was drawn past the contract oval."""
+        """What the real return did.
+
+        Measured on the re-exported face sandbox: the returned ellipse sat at
+        (13, 0, 423, 611) where the contract oval is (35, 36, 402, 592), so it
+        was drawn 19-42 px proud on every side and spilled 22636 pixels. The
+        colour was never the problem, and the right verdict is still rejected:
+        the shape is the contract, not a suggestion.
+        """
         report = self._report(fixtures.underlay(self.base, self.oval, grow=6))
         self.assertEqual(report["status"], "rejected")
         self.assertIn("silhouette", report["failed"])

@@ -288,7 +288,8 @@ def _reference_colour(
         if tone is None:
             return None
         flat = np.array(tone, dtype=np.float32)
-        return np.broadcast_to(flat, base.shape[:2] + (3,)), list(flat), "the layer base colour"
+        expected = np.broadcast_to(flat, base.shape[:2] + (3,))
+        return expected, [float(value) for value in tone], "the layer base colour"
 
     # Compare local averages, not single pixels. A fill that correctly
     # continues a hair/skin boundary would otherwise show a 100 unit error
