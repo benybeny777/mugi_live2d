@@ -25,13 +25,16 @@ LOCK_ALPHA = 250
 #: Instructions repeated into every manifest so the GUI side never has to guess.
 RULES: tuple[str, ...] = (
     "Open base.png only. Never run generative fill on the master PSD.",
-    "Load editable.png as a selection and keep the selection active while generating.",
-    "Do not flatten, resize, rotate, crop, or change the canvas of base.png.",
+    "Open editable.png too, then in base.png use Select > Load Selection with "
+    "editable.png as the source document.",
+    "Keep that selection active for the whole generation.",
+    "Do not resize, rotate, crop, or change the canvas size of base.png.",
     "Leave every pixel under locked.png byte-identical.",
     "Generate flat base colour continuous with the surrounding art: no fabric, "
     "weave, cloth, knit, pattern, texture, gradient banding, or lighting detail.",
-    "Save the result as the return file listed in this manifest, as RGBA PNG, "
-    "same pixel size as base.png, with transparency preserved.",
+    "Export the result as the return file named in this manifest: PNG, "
+    "transparency on, 100% scale, same pixel size as base.png. Flattening on "
+    "export is expected; do not overwrite base.png.",
 )
 
 
