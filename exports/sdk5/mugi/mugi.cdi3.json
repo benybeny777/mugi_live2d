@@ -151,6 +151,10 @@
 	],
 	"Parts": [
 		{
+			"Id": "Part11",
+			"Name": "mugi-hiyori-compatible-completed.psd（対応無し）"
+		},
+		{
 			"Id": "Part",
 			"Name": "アクセサリー"
 		},
@@ -185,6 +189,26 @@
 		{
 			"Id": "PartNeck",
 			"Name": "首"
+		},
+		{
+			"Id": "Part6",
+			"Name": "アクセサリー"
+		},
+		{
+			"Id": "Part7",
+			"Name": "髪（前・横）"
+		},
+		{
+			"Id": "Part8",
+			"Name": "顔"
+		},
+		{
+			"Id": "Part9",
+			"Name": "身体"
+		},
+		{
+			"Id": "Part10",
+			"Name": "髪（後ろ）"
 		}
 	]
 }
