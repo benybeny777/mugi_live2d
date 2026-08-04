@@ -22,3 +22,5 @@ HTMLベースのローカル動作確認ツールは `viewer/README.md` を参�
 制作手順の正本は `WORKFLOW.md`、現在の進捗は `STATUS.md` です。工程変更時は両方を同じGit変更内で更新します。別キャラクターを新規作成するときは `NEW_CHARACTER.md` を使います。
 
 再現可能なモデル生成は、固定済みの高品質リグへ同一トポロジーの画像を適用する[A方式](docs/FIXED_TOPOLOGY_PIPELINE.md)を優先します。入力画像はCubismへ入れる前に境界QAを通します。
+
+隠れた額・後髪・口内をPhotoshopの生成塗りつぶしで補完するときは、原PSDを開かず[レイヤーsandbox方式](docs/LAYER_SANDBOX.md)を使います。

@@ -12,6 +12,15 @@
 - README動画と `viewer/` は保護・回帰確認済み
 - 現在は合成画像の正規化まで。固定レイヤーPNG/PSD生成とCubism適用は未完了
 
+## レイヤーsandbox方式の進捗
+
+- PSDレイヤー抽出・sandbox書き出し・検査・戻し: `python -m pipeline.sandbox`
+- 手順書: `docs/LAYER_SANDBOX.md`
+- 原PSDへの生成塗りつぶしは全画面へ模様が出るため実行しない。原本は無変更。
+- `/顔/顔` のsandboxは506×559pxで書き出し済み（元canvasは2976×4175px）
+- 布地模様の回帰テストを含む21件のsandboxテストを追加。全69件とRuffは合格
+- 未完了: Codexによる実際の生成、その結果の検査と取り込み
+
 ## 今回のチェックポイント
 
 - Cubism編集モデル: `work/cubism/mugi-hiyori-rigged-final.cmo3`
@@ -32,6 +41,7 @@
 
 ## 再開位置
 
+0. `work/sandbox/face` をPhotoshopで生成し、`qa` と `import` を通す。
 1. balanced候補を固定マスクへ分解し、隠れた額・後髪・口内を補完する。
 2. v2契約の境界、包含、髪の継ぎ目QAを通す。
 3. 合格PSDだけをマスターCMO3へ再インポートする。

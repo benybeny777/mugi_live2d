@@ -41,7 +41,8 @@
 9. 顔、前髪、横髪、後髪、目、まつげ、眉、口、首、胴体、腕を独立レイヤーにする。
 10. 顔レイヤーは目・眉・鼻・口を消した下地にし、輪郭の穴や塗り足しを100%表示で確認する。
 11. Photoshopで直した場合も、レイヤー名とキャンバス位置は変えない。
-12. Cubism取込用PSDを `work/psd/hiyori/mugi-hiyori-compatible-final.psd` に保存する。
+12. 隠れた額・後髪・口内を生成塗りつぶしで補うときは、原PSDを開かず `python -m pipeline.sandbox` のsandboxを使う。原PSDのレイヤーは全キャンバス＋マスク構成のため、直接実行すると全画面へ模様が生成される。手順は `docs/LAYER_SANDBOX.md`。
+13. Cubism取込用PSDを `work/psd/hiyori/mugi-hiyori-compatible-final.psd` に保存する。
 
 ## 3. Cubismでリグを適用する
 
