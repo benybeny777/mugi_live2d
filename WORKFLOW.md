@@ -58,6 +58,19 @@
 6. 全ArtMeshを選択し、必要に応じて「メッシュの自動生成」の変形度合い（大）を適用する。パラメータ設定後は形状が変わるため、必ず全キー値を再確認する。
 7. 編集ファイルを `work/cubism/mugi-hiyori-rigged-final.cmo3` に保存する。
 
+### キーフォーム転送の境界
+
+ひよりの変形をむぎのArtMeshへ移すときは、キーフォームの頂点座標を直接コピーしない。絶対座標のコピーは髪の浮き・頭頂部の白抜け・口の消失として実際に失敗している。手順とスキーマは `docs/KEYFORM_TRANSFER.md` を正本とする。
+
+| 工程 | 担当 | 合否 |
+| --- | --- | --- |
+| manifest検査・対応表検証・フレーム推定・変位転送・計画生成 | `python -m pipeline.keyform`（自動・テスト済み） | 終了コード0かつ `status == "ready"` |
+| Cubismからのmanifest抽出 | Cubism GUI（手作業） | `keyform validate` が通ること |
+| 計画のCubismへの適用 | Cubism GUIブリッジ（**別ゲート**） | 適用後に再抽出し `target_invariants` が一致すること |
+| まばたき・口パク・髪揺れの端値確認、viewer、PicoAgent | 目視（**別ゲート**） | 第3節5項と第4節の確認項目 |
+
+計画が `ready` でも見た目の合格ではない。純粋な計画側が通っただけであり、GUI適用と目視確認は必ず別工程として実施する。対応表 `pipeline/keyform-map.*.json` はレビュー済みデータとして扱い、実行を通すために書き換えない。
+
 ## 4. 書き出しと組み込み
 
 1. Cubism 5向けを `exports/sdk5/` に書き出す。
