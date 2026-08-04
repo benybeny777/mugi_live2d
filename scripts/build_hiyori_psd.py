@@ -11,15 +11,15 @@ from PIL import Image, ImageChops, ImageFilter
 CREATOR_REPOSITORY = Path(r"C:\00_PG\30_live")
 MODEL_REPOSITORY = Path(r"C:\00_PG\40_mugi_live2d")
 SOURCE = MODEL_REPOSITORY / "source" / "mugi-original.png"
-SEE_THROUGH_LAYERS = (
-    MODEL_REPOSITORY / "work" / "psd" / "seethrough" / "mugi-original"
-)
+SEE_THROUGH_LAYERS = MODEL_REPOSITORY / "work" / "psd" / "seethrough" / "mugi-original"
 OUTPUT_DIRECTORY = MODEL_REPOSITORY / "work" / "psd" / "hiyori"
 
 sys.path.insert(0, str(CREATOR_REPOSITORY))
 
 from app.psd.exporter import LayerBuilder, PsdExporter  # noqa: E402
 from app.segmentation.seethrough import SeeThroughSegmentationBackend  # noqa: E402
+
+from scripts.complete_hiyori_face import complete_face_layers  # noqa: E402
 
 
 def _add_hair_underlay_overlap(layers_directory: Path) -> None:
@@ -60,6 +60,7 @@ def main() -> int:
         SOURCE, OUTPUT_DIRECTORY / "masks"
     )
     layers = LayerBuilder().build(SOURCE, masks, OUTPUT_DIRECTORY / "layers")
+    complete_face_layers(SOURCE, OUTPUT_DIRECTORY / "layers")
     _add_hair_underlay_overlap(OUTPUT_DIRECTORY / "layers")
     destination = OUTPUT_DIRECTORY / "mugi-hiyori-compatible-final.psd"
     PsdExporter().export(layers, destination)
