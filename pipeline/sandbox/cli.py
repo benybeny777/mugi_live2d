@@ -12,6 +12,8 @@ from pipeline.fixedtopo import imaging
 from pipeline.sandbox import export as exporter
 from pipeline.sandbox import manifest as mf
 from pipeline.sandbox import psdlayer
+from pipeline.sandbox import qa as checks
+from pipeline.sandbox import restore as restorer
 
 DEFAULT_PSD = Path("work/psd/hiyori/mugi-hiyori-compatible-clean.psd")
 
@@ -87,6 +89,30 @@ def _export(args: argparse.Namespace) -> int:
     return 0
 
 
+def _qa(args: argparse.Namespace) -> int:
+    """Check a returned image without writing anything."""
+    manifest = mf.load(args.sandbox / "manifest.json")
+    filled = args.filled or args.sandbox / manifest.ret["file"]
+    report = checks.evaluate(manifest, args.sandbox, filled)
+    _emit(report, args.json)
+    if args.json is not None:
+        _emit(report, None)
+    return 0 if report["status"] == "review_required" else 1
+
+
+def _import(args: argparse.Namespace) -> int:
+    """Place a reviewed result back onto the master canvas."""
+    manifest = mf.load(args.sandbox / "manifest.json")
+    filled = args.filled or args.sandbox / manifest.ret["file"]
+    report = restorer.restore(args.sandbox, filled, args.out, args.reviewed_by, args.psd)
+    _emit(report, args.json)
+    if args.json is not None:
+        _emit(report, None)
+    if report["failed"]:
+        return 1
+    return 0 if report["status"] == "approved" else 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Return the command line parser."""
     parser = argparse.ArgumentParser(
@@ -121,6 +147,21 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--margin", type=int, default=32, help="context kept around the crop")
     export.add_argument("--target", type=_box, help="extra editable box as x0,y0,x1,y1 on canvas")
     export.set_defaults(handler=_export)
+
+    qa = commands.add_parser("qa", help="check a returned image; never reports acceptance")
+    qa.add_argument("sandbox", type=Path)
+    qa.add_argument("--filled", type=Path)
+    qa.add_argument("--json", type=Path)
+    qa.set_defaults(handler=_qa)
+
+    importer = commands.add_parser("import", help="place a reviewed result back on the canvas")
+    importer.add_argument("sandbox", type=Path)
+    importer.add_argument("--filled", type=Path)
+    importer.add_argument("--out", type=Path, required=True)
+    importer.add_argument("--psd", type=Path)
+    importer.add_argument("--reviewed-by", help="name of the person who approved the image")
+    importer.add_argument("--json", type=Path)
+    importer.set_defaults(handler=_import)
 
     return parser
 

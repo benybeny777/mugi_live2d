@@ -27,14 +27,21 @@ DEFAULT_TOLERANCES: dict[str, float] = {
     "locked_channel_delta": 2,
     #: Share of locked pixels allowed to exceed that delta.
     "locked_pixel_ratio": 0.0005,
-    #: Largest mean RGB distance between filled and original opaque colour.
+    #: Largest RGB distance from a filled pixel to the artwork it borders.
     "colour_distance": 26.0,
+    #: Share of filled pixels allowed to exceed that distance. A median would
+    #: pass a fill that is right on one edge and wrong on the other.
+    "colour_outlier_ratio": 0.10,
     #: Largest filled-to-original ratio of mean absolute Laplacian energy.
-    "texture_energy_ratio": 2.5,
+    #: Measured on the face sandbox: a correct edge extension sits at 1.15 and
+    #: a woven fill at 7.7.
+    "texture_energy_ratio": 1.6,
     #: Largest absolute mean absolute Laplacian inside the filled region.
     "texture_energy_absolute": 6.0,
-    #: Largest share of filled spectral energy allowed in one periodic peak.
-    "pattern_peak_ratio": 0.02,
+    #: Largest autocorrelation of the filled region's detail at any repeat lag.
+    #: Measured on the face sandbox: correct fills sit at 0.20-0.29 and a woven
+    #: fill at 0.80.
+    "pattern_periodicity": 0.45,
     #: Share of filled pixels allowed to stay partially transparent.
     "soft_alpha_ratio": 0.02,
     #: Filled pixels allowed to fall outside the editable region.

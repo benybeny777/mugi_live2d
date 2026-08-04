@@ -13,6 +13,7 @@ from PIL import Image
 
 CANVAS = (200, 200)
 SKIN = (243, 214, 199)
+HAIR = (108, 82, 66)
 
 
 def disc(canvas: tuple[int, int] = CANVAS, radius: int = 40, colour=SKIN) -> NDArray[np.uint8]:
@@ -35,19 +36,47 @@ def fill(base: NDArray[np.uint8], region: NDArray[np.bool_], colour=SKIN) -> NDA
     return out
 
 
+def shaded_disc(canvas: tuple[int, int] = CANVAS, radius: int = 40) -> NDArray[np.uint8]:
+    """Return a disc whose upper part is hair-toned and lower part is skin.
+
+    Mugi's face layer looks like this: the See-through split left dark
+    hair-coloured pixels along the top edge, so a single reference colour for
+    the layer would be wrong everywhere.
+    """
+    rgba = disc(canvas, radius)
+    top = np.arange(canvas[1])[:, None] < canvas[1] / 2
+    rgba[..., :3] = np.where(top[..., None], np.array(HAIR, dtype=np.uint8), rgba[..., :3])
+    return rgba
+
+
+def extend(base: NDArray[np.uint8], region: NDArray[np.bool_]) -> NDArray[np.uint8]:
+    """Return ``base`` with ``region`` carrying the nearest existing colour.
+
+    This is what a correct completion looks like on shaded artwork: the colour
+    each new pixel borders, carried outward, with no invented detail.
+    """
+    from pipeline.sandbox.qa import nearest_colour
+
+    out = base.copy()
+    nearest = nearest_colour(base, base[..., 3] >= 250)
+    out[..., :3] = np.where(region[..., None], nearest, out[..., :3])
+    out[..., 3] = np.where(region, 255, out[..., 3])
+    return out
+
+
 def fabric(
     base: NDArray[np.uint8],
     region: NDArray[np.bool_],
-    colour=SKIN,
+    colour=None,
     period: int = 6,
     amplitude: float = 18.0,
 ) -> NDArray[np.uint8]:
     """Return ``base`` with ``region`` painted a woven cloth pattern.
 
-    The mean colour is left alone on purpose: a weave passes a colour check and
-    has to be caught by the texture and pattern measures instead.
+    The average colour is left correct on purpose: a weave passes a colour
+    check and has to be caught by the texture and pattern measures instead.
     """
-    out = fill(base, region, colour)
+    out = extend(base, region) if colour is None else fill(base, region, colour)
     height, width = region.shape
     ys = np.arange(height)[:, None]
     xs = np.arange(width)[None, :]
@@ -60,6 +89,12 @@ def fabric(
 def save(rgba: NDArray[np.uint8], path) -> None:
     """Write an RGBA array as a PNG."""
     Image.fromarray(rgba, mode="RGBA").save(path, optimize=True)
+
+
+def load_rgba(path) -> NDArray[np.uint8]:
+    """Read a PNG back as an RGBA array."""
+    with Image.open(path) as opened:
+        return np.asarray(opened.convert("RGBA"), dtype=np.uint8)
 
 
 def load_mask(path) -> NDArray[np.bool_]:
