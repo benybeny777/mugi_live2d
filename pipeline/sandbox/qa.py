@@ -5,6 +5,9 @@ generative fill produced a woven fabric texture across a region that should
 have been flat skin. Eyeballing a thumbnail did not catch it quickly, so the
 texture and pattern checks here measure it numerically. No check in this module
 can mark a result accepted; the best automated verdict is ``review_required``.
+
+Only ``colour_match`` reads the manifest's fill mode; every other check means
+the same thing for an edge extension and for an underlay.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from scipy import ndimage
 
 from pipeline.fixedtopo import imaging
 from pipeline.fixedtopo.imaging import Mask
+from pipeline.sandbox import export as exporter
 from pipeline.sandbox import manifest as mf
 from pipeline.sandbox.export import LOCK_ALPHA
 
@@ -151,9 +155,10 @@ def periodicity(rgb: NDArray[np.uint8], region: Mask) -> tuple[float, tuple[int,
 def nearest_colour(rgb: NDArray[np.uint8], solid: Mask) -> NDArray[np.uint8]:
     """Return, for every pixel, the RGB of the closest pixel inside ``solid``.
 
-    A single reference colour per layer is not usable here. Mugi's face layer
-    carries hair-toned shading along its upper edge and flat skin below, so a
-    fill is only comparable to the artwork it directly continues.
+    An edge extension has no single reference colour. Mugi's face layer carries
+    hair-toned shading along its upper edge and flat skin below, so a fill that
+    grows that silhouette is only comparable to the artwork it directly
+    continues. An underlay is the opposite case and does not come through here.
     """
     _, indices = ndimage.distance_transform_edt(~solid, return_indices=True)
     return rgb[indices[0], indices[1], :3]
@@ -253,22 +258,56 @@ def _check_silhouette(
     )
 
 
-def _check_colour(
-    base: NDArray[np.uint8], filled: NDArray[np.uint8], new: Mask, manifest: mf.Manifest
-) -> Check:
-    """The fill must match the colour of the artwork it continues."""
-    # ``LOCK_ALPHA`` already excludes anti-aliased edge pixels. Eroding further
-    # would drop the thin bang spikes in Mugi's face layer entirely and judge
-    # the fill beside them against colour fetched from far away.
+def _reference_colour(
+    base: NDArray[np.uint8], new: Mask, mode: str
+) -> tuple[NDArray[np.float32], list[float], str] | None:
+    """Return the colour every new pixel is measured against, and where it came from.
+
+    The two fill modes ask different questions of the same artwork.
+
+    ``extend`` grows the silhouette outward, so each new pixel is judged
+    against the artwork it touches: a single reference colour per layer would
+    call a correct continuation of Mugi's hair-toned face edge a 200 unit
+    error.
+
+    ``underlay`` completes a shape *beneath* the artwork, and there the
+    silhouette is the wrong thing to look at. Every edge of the face layer is a
+    drawn rim, hair-toned and up to 20 px deep, painted on top of the skin. An
+    underlay that correctly continues the skin borders that rim everywhere, so
+    comparing it with what it borders rejects exactly the fill that is wanted -
+    which is what happened on 2026-08-04: median distance 74 against a fill
+    whose colour was already the artwork's own [250, 235, 215].
+    """
+    # ``LOCK_ALPHA`` excludes transparent and anti-aliased pixels from every
+    # reference: their stored RGB is not a colour anyone painted.
     reference = base[..., 3] >= LOCK_ALPHA
-    if not new.any() or not reference.any():
-        return Check("colour_match", True, "not enough pixels to compare colour", {})
+    if not reference.any():
+        return None
+    if mode == exporter.UNDERLAY:
+        tone = exporter.base_colour(base)
+        if tone is None:
+            return None
+        flat = np.array(tone, dtype=np.float32)
+        return np.broadcast_to(flat, base.shape[:2] + (3,)), list(flat), "the layer base colour"
 
     # Compare local averages, not single pixels. A fill that correctly
     # continues a hair/skin boundary would otherwise show a 100 unit error
     # wherever the nearest artwork pixel sits on the other side of that edge.
-    ideal = nearest_colour(base, reference)
-    expected = _local_mean(ideal, new, COLOUR_BLUR)
+    expected = _local_mean(nearest_colour(base, reference), new, COLOUR_BLUR)
+    return expected, _median_colour(base, reference), "the artwork they border"
+
+
+def _check_colour(
+    base: NDArray[np.uint8], filled: NDArray[np.uint8], new: Mask, manifest: mf.Manifest
+) -> Check:
+    """The fill must carry a colour the artwork actually has."""
+    if not new.any():
+        return Check("colour_match", True, "not enough pixels to compare colour", {})
+    against = _reference_colour(base, new, manifest.fill_mode)
+    if against is None:
+        return Check("colour_match", True, "not enough pixels to compare colour", {})
+    expected, art_rgb, described = against
+
     actual = _local_mean(filled, new, COLOUR_BLUR)
     gap = np.linalg.norm(actual - expected, axis=-1)
     limit = manifest.tolerance("colour_distance")
@@ -279,12 +318,14 @@ def _check_colour(
     return Check(
         "colour_match",
         ok,
-        f"{ratio:.1%} of filled pixels are more than {limit:.0f} RGB from the artwork "
-        f"they border (limit {ratio_limit:.0%})"
-        + ("" if ok else "; the fill does not continue the colour it borders"),
+        f"{ratio:.1%} of filled pixels are more than {limit:.0f} RGB from {described} "
+        f"(limit {ratio_limit:.0%})"
+        + ("" if ok else f"; the fill does not carry {described}"),
         {
+            "mode": manifest.fill_mode,
+            "compared_with": described,
             "fill_rgb": [round(v, 2) for v in _median_colour(filled, new)],
-            "art_rgb": [round(v, 2) for v in _median_colour(base, reference)],
+            "art_rgb": [round(v, 2) for v in art_rgb],
             "distance_median": round(float(np.median(gaps)), 3),
             "distance_p95": round(float(np.percentile(gaps, 95)), 3),
             "outlier_ratio": round(ratio, 6),

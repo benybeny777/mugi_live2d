@@ -132,6 +132,102 @@ class ShadedArtworkTest(unittest.TestCase):
         self.assertIn("pattern_free", report["failed"])
 
 
+class UnderlayTest(unittest.TestCase):
+    """The 2026-08-04 face return: a flat ellipse painted under the artwork.
+
+    Every edge of Mugi's face layer is a drawn, hair-toned rim, so an underlay
+    that correctly continues the skin borders a colour it must not copy. The
+    numbers from that run are the ones pinned here: the returned fill was the
+    artwork's own [250, 235, 215] and the old check still measured a median
+    distance of 74 against the rim it happened to touch.
+    """
+
+    def setUp(self) -> None:
+        self.root = Path(tempfile.mkdtemp(prefix="sandbox-underlay-"))
+        self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
+        self.layer = fixtures.capped_oval()
+        self.region = fixtures.oval_region()
+        self.manifest = export.write_sandbox(
+            self.layer,
+            fixtures.source(),
+            self.root,
+            "face",
+            grow=8.0,
+            margin=8,
+            region=self.region,
+        )
+        self.directory = self.root / "face"
+        x0, y0, x1, y1 = self.manifest.box
+        self.base = self.layer[y0:y1, x0:x1]
+        self.oval = self.region.shifted(-x0, -y0).box
+
+    def _report(self, filled: np.ndarray) -> dict:
+        path = self.directory / "filled.png"
+        fixtures.save(filled, path)
+        return qa.evaluate(self.manifest, self.directory, path)
+
+    def _colour(self, report: dict) -> dict:
+        return next(check for check in report["checks"] if check["name"] == "colour_match")
+
+    def test_the_sandbox_declares_the_shape_and_the_colour_to_use(self) -> None:
+        sandbox = self.manifest.sandbox
+        self.assertEqual(sandbox["fill_mode"], export.UNDERLAY)
+        self.assertEqual(sandbox["region"]["box"], list(self.oval))
+        self.assertEqual(tuple(sandbox["base_colour"]), fixtures.SKIN)
+        self.assertIn("below", " ".join(self.manifest.rules))
+
+    def test_a_base_colour_underlay_is_not_rejected_for_bordering_the_drawn_rim(self) -> None:
+        report = self._report(fixtures.underlay(self.base, self.oval))
+        self.assertEqual(report["failed"], [])
+        detail = self._colour(report)["detail"]
+        self.assertEqual(detail["mode"], export.UNDERLAY)
+        self.assertEqual(tuple(detail["art_rgb"]), fixtures.SKIN)
+        self.assertLess(detail["distance_median"], 1.0)
+
+    def test_it_still_stops_at_review_required(self) -> None:
+        report = self._report(fixtures.underlay(self.base, self.oval))
+        self.assertEqual(report["status"], "review_required")
+        self.assertNotEqual(report["status"], "approved")
+
+    def test_an_underlay_larger_than_the_shape_is_rejected(self) -> None:
+        """What the real return did: the ellipse was drawn past the contract oval."""
+        report = self._report(fixtures.underlay(self.base, self.oval, grow=6))
+        self.assertEqual(report["status"], "rejected")
+        self.assertIn("silhouette", report["failed"])
+        self.assertTrue(self._colour(report)["ok"], "the colour was never the problem")
+
+    def test_a_stone_coloured_underlay_is_still_rejected(self) -> None:
+        report = self._report(fixtures.underlay(self.base, self.oval, colour=fixtures.STONE))
+        self.assertEqual(report["status"], "rejected")
+        self.assertIn("colour_match", report["failed"])
+
+    def test_a_woven_underlay_is_still_rejected(self) -> None:
+        painted = fixtures.underlay_mask(self.base, self.oval)
+        report = self._report(fixtures.fabric(self.base, painted, colour=fixtures.SKIN))
+        self.assertEqual(report["status"], "rejected")
+        self.assertIn("texture_flatness", report["failed"])
+        self.assertIn("pattern_free", report["failed"])
+
+    def test_an_edge_extension_reading_of_the_same_image_is_what_used_to_reject_it(self) -> None:
+        """The old contract, run over the good underlay, to show what changed."""
+        raw = dict(self.manifest.raw)
+        raw["sandbox"] = dict(raw["sandbox"], fill_mode=export.EXTEND)
+        as_extend = mf.Manifest(
+            raw["id"],
+            raw["source"],
+            raw["sandbox"],
+            self.manifest.files,
+            raw["return"],
+            self.manifest.tolerances,
+            self.manifest.rules,
+            raw,
+        )
+        path = self.directory / "filled.png"
+        fixtures.save(fixtures.underlay(self.base, self.oval), path)
+        report = qa.evaluate(as_extend, self.directory, path)
+        self.assertIn("colour_match", report["failed"])
+
+
 class RejectionTest(SandboxCase):
     def test_a_resized_return_is_rejected(self) -> None:
         good = fixtures.fill(self.base, self.editable)
