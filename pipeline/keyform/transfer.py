@@ -319,6 +319,7 @@ def plan(
         "target_invariants": {
             "artmesh_count": len(target.meshes),
             "meshes": {mesh.id: mf.invariant_digest(mesh) for mesh in target.meshes},
+            "keyforms": {mesh.id: mf.keyform_digest(mesh) for mesh in target.meshes},
         },
         "meshes": meshes,
         "excluded": [

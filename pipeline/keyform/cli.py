@@ -10,7 +10,7 @@ from typing import Any
 
 from pipeline.keyform import manifest as mf
 from pipeline.keyform import meshmap as mm
-from pipeline.keyform import transfer
+from pipeline.keyform import transfer, verification
 from pipeline.sandbox.manifest import sha256_file
 
 
@@ -148,11 +148,21 @@ def _plan(args: argparse.Namespace) -> int:
     return 0 if document["status"] == "ready" else 1
 
 
+def _verify(args: argparse.Namespace) -> int:
+    """Prove that a Cubism re-export matches an approved plan."""
+    plan = json.loads(args.plan.read_text(encoding="utf-8"))
+    report = verification.verify(plan, mf.load(args.actual))
+    _emit(report, args.out)
+    if args.out is not None:
+        _emit({"status": report["status"], "problems": report["problems"]}, None)
+    return 0 if report["status"] == "ready" else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Return the command line parser."""
     parser = argparse.ArgumentParser(
         prog="python -m pipeline.keyform",
-        description="Plan a validated keyform transfer from a source rig onto target ArtMeshes.",
+        description="Plan, apply and verify keyform transfer onto target ArtMeshes.",
     )
     commands = parser.add_subparsers(dest="command", required=True)
 
@@ -191,6 +201,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     planner.add_argument("--out", type=Path)
     planner.set_defaults(handler=_plan)
+
+    verifier = commands.add_parser("verify", help="verify a re-extracted Cubism document")
+    verifier.add_argument("--plan", type=Path, required=True)
+    verifier.add_argument("--actual", type=Path, required=True)
+    verifier.add_argument("--out", type=Path)
+    verifier.set_defaults(handler=_verify)
 
     return parser
 

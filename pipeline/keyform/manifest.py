@@ -382,3 +382,21 @@ def topology_digest(mesh: Mesh) -> str:
     }
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def keyform_digest(mesh: Mesh) -> str:
+    """Digest every parameter coordinate and vertex of an ArtMesh.
+
+    Structural invariants intentionally ignore deformation geometry.  This
+    companion digest lets post-apply verification prove that explicitly
+    excluded meshes were not changed at all.
+    """
+    payload = [
+        {
+            "coordinate": form.coordinate_json(),
+            "vertices": [list(vertex) for vertex in form.vertices],
+        }
+        for form in mesh.forms
+    ]
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()

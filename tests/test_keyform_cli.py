@@ -135,6 +135,39 @@ class KeyformCliTest(unittest.TestCase):
         document = json.loads(out_path.read_text(encoding="utf-8"))
         self.assertEqual(document["diagnostics"][0]["code"], "displacement_over_limit")
 
+    def test_verify_accepts_the_exact_planned_output(self) -> None:
+        source, target, mapping = self.documents()
+        plan_path = self.root / "plan.json"
+        run(["plan", "--source", str(source), "--target", str(target),
+             "--map", str(mapping), "--out", str(plan_path)])
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        applied = json.loads(target.read_text(encoding="utf-8"))
+        applied["meshes"][0]["forms"] = [
+            {"coordinate": form["coordinate"], "vertices": form["vertices"]}
+            for form in plan["meshes"][0]["forms"]
+        ]
+        actual = self.write("actual.json", applied)
+        code, out, _ = run(["verify", "--plan", str(plan_path), "--actual", str(actual)])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)["status"], "ready")
+
+    def test_verify_rejects_one_changed_vertex(self) -> None:
+        source, target, mapping = self.documents()
+        plan_path = self.root / "plan.json"
+        run(["plan", "--source", str(source), "--target", str(target),
+             "--map", str(mapping), "--out", str(plan_path)])
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        applied = json.loads(target.read_text(encoding="utf-8"))
+        applied["meshes"][0]["forms"] = [
+            {"coordinate": form["coordinate"], "vertices": form["vertices"]}
+            for form in plan["meshes"][0]["forms"]
+        ]
+        applied["meshes"][0]["forms"][0]["vertices"][0][0] += 0.01
+        actual = self.write("actual.json", applied)
+        code, out, _ = run(["verify", "--plan", str(plan_path), "--actual", str(actual)])
+        self.assertEqual(code, 1)
+        self.assertEqual(json.loads(out)["problems"][0]["code"], "vertices_mismatch")
+
     def test_draft_map_pairs_only_unambiguous_topology(self) -> None:
         source = self.write(
             "source.json",
