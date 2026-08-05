@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
+from scipy.ndimage import distance_transform_edt
 
 
 def parse_atlas_layout(path: Path) -> dict[str, tuple[int, int, int, int]]:
@@ -62,6 +63,44 @@ def fill_solid_rect(
     pixels[y : y + height, x : x + width, 3] = 255
     Image.fromarray(pixels, "RGBA").save(path, optimize=True)
     return width * height
+
+
+def dilate_region_alpha(
+    path: Path,
+    regions: dict[str, tuple[int, int, int, int]],
+    names: set[str],
+    radius: int,
+) -> int:
+    """Grow each opaque edge outwards by ``radius`` pixels inside named islands.
+
+    Closing seams by filling every enclosed transparent pixel also closes the
+    gaps that give the braid and the hairclip their shape, so those decorations
+    turn into a solid blob. Growing only outwards from existing edges closes the
+    thin seams between adjacent meshes while leaving wider intentional gaps open,
+    which measurably keeps the decorations intact.
+    """
+    if radius < 1:
+        raise ValueError("dilation radius must be at least 1")
+    image = Image.open(path).convert("RGBA")
+    pixels = np.array(image)
+    grown = 0
+    for name in names:
+        if name not in regions:
+            raise ValueError(f"atlas layout does not contain {name!r}")
+        x, y, width, height = regions[name]
+        region = pixels[y : y + height, x : x + width]
+        opaque = region[:, :, 3] > 0
+        if not opaque.any():
+            raise ValueError(f"atlas region {name!r} has no opaque source pixels")
+        # Nearest opaque source for every pixel, so grown pixels copy a real
+        # neighbouring colour instead of a single flat average.
+        distance, (rows, columns) = distance_transform_edt(~opaque, return_indices=True)
+        added = (~opaque) & (distance <= radius)
+        region[added, :3] = region[rows[added], columns[added], :3]
+        region[added, 3] = 255
+        grown += int(added.sum())
+    Image.fromarray(pixels, "RGBA").save(path, optimize=True)
+    return grown
 
 
 def fill_hair_cap_regions(
@@ -197,14 +236,17 @@ def main() -> int:
         help="Remove matte pixels only inside this named atlas rectangle (repeatable).",
     )
     parser.add_argument("--fill-hair-cap-region-name", action="append", default=[])
+    parser.add_argument("--dilate-region-name", action="append", default=[])
+    parser.add_argument("--dilate-radius", type=int, default=32)
     parser.add_argument("--fill-solid-rect", help="x,y,width,height,RRGGBB")
     args = parser.parse_args()
     clear_texture_names = set(args.clear_texture_name)
     remove_bright_neutral_names = set(args.remove_bright_neutral_texture_name)
     region_names = set(args.remove_bright_neutral_region_name)
     hair_cap_names = set(args.fill_hair_cap_region_name)
+    dilate_names = set(args.dilate_region_name)
     regions = parse_atlas_layout(args.atlas_layout) if args.atlas_layout else {}
-    if (region_names or hair_cap_names) and not regions:
+    if (region_names or hair_cap_names or dilate_names) and not regions:
         parser.error("--atlas-layout is required for region operations")
     for directory in args.directories:
         for path in sorted(directory.rglob("*.png")):
@@ -223,6 +265,9 @@ def main() -> int:
             if hair_cap_names and path.name == "texture_00.png":
                 cap_filled = fill_hair_cap_regions(path, regions, hair_cap_names)
                 print(f"{path}: region_hair_cap_filled={cap_filled}")
+            if dilate_names and path.name == "texture_00.png":
+                grown = dilate_region_alpha(path, regions, dilate_names, args.dilate_radius)
+                print(f"{path}: region_dilated={grown} radius={args.dilate_radius}")
             if args.fill_solid_rect and path.name == "texture_00.png":
                 fields = args.fill_solid_rect.split(",")
                 if len(fields) != 5:
