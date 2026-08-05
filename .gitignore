@@ -30,3 +30,12 @@ work/qa/
 work/sandbox/
 work/keyform/
 temp/
+
+# Local Claude Code state and isolated worktrees.
+.claude/
+
+# Bridge experiment CMO3。マスターと `scripts/cubism_bridge` から再生成できるため、
+# 生成条件を記録した `*.cmo3.agent.txt` だけを残す。
+work/cubism/*-test.cmo3
+work/cubism/*-attempt.cmo3
+!work/cubism/mugi-normalized-rig-test.cmo3
