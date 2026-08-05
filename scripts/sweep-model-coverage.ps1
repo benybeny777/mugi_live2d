@@ -6,7 +6,7 @@ param(
   [string]$ViewerBase = 'http://127.0.0.1:8765',
   [string]$ShotDir = 'temp/coverage-shots',
   [string]$Report = 'temp/coverage-report.json',
-  [string]$Roi = '210,163,280,280',
+  [string]$Stage = '118,40,1220,510',
   [int]$Width = 1000,
   [int]$Height = 1400,
   [int]$LoadBudgetMs = 15000
@@ -47,5 +47,5 @@ foreach ($name in $Candidate) {
 
 $python = Join-Path $root '.venv\Scripts\python.exe'
 if (-not (Test-Path $python)) { $python = 'python' }
-& $python (Join-Path $root 'scripts\measure_render_coverage.py') @rendered --roi $Roi --report (Join-Path $root $Report)
+& $python (Join-Path $root 'scripts\measure_render_coverage.py') @rendered --stage $Stage --report (Join-Path $root $Report)
 if ($LASTEXITCODE -ne 0) { throw 'coverage measurement failed' }
