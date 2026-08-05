@@ -219,9 +219,9 @@ def _morph_offset(
         dx, dy = _mouth_deform(u, v, width, height, horizontal=-0.18, vertical=0.62)
     elif name in {"happy", "sad", "relaxed"}:
         direction = -1.0 if name == "sad" else 1.0
-        amount = 0.010 if name == "relaxed" else 0.018
+        amount = 0.0025 if name == "relaxed" else 0.004
         for corner in ((0.482, 0.183), (0.518, 0.183)):
-            dy += direction * height * amount * _gaussian(u, v, corner, (0.025, 0.018))
+            dy += direction * height * amount * _gaussian(u, v, corner, (0.020, 0.010))
         if name == "relaxed":
             dy += 0.34 * (_eye_close(u, v, left_eye, height) + _eye_close(u, v, right_eye, height))
     elif name == "angry":
