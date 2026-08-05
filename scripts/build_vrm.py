@@ -163,7 +163,6 @@ def build_vrm(source: Path, output: Path, max_texture_size: int = 2048) -> dict[
     root, bones = _build_skeleton(nodes)
     card_node = _add_node(nodes, "MugiCard")
     nodes[card_node].update({"mesh": 0, "skin": 0})
-    nodes[root]["children"].append(card_node)
 
     accessors = [
         {
@@ -206,7 +205,7 @@ def build_vrm(source: Path, output: Path, max_texture_size: int = 2048) -> dict[
             }
         },
         "scene": 0,
-        "scenes": [{"name": "Mugi VRM", "nodes": [root]}],
+        "scenes": [{"name": "Mugi VRM", "nodes": [root, card_node]}],
         "nodes": nodes,
         "meshes": [
             {
