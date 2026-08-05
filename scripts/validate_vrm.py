@@ -37,6 +37,10 @@ REQUIRED_EXPRESSIONS = {
     "blink",
     "blinkLeft",
     "blinkRight",
+    "lookLeft",
+    "lookRight",
+    "lookUp",
+    "lookDown",
 }
 EXPECTED_PARENTS = {
     "spine": "hips",
@@ -170,18 +174,31 @@ def validate(path: Path) -> list[str]:
     if missing_expressions:
         errors.append("missing required expressions: " + ", ".join(missing_expressions))
     custom = vrm.get("expressions", {}).get("custom", {})
-    if "breath" not in custom:
-        errors.append("custom breath expression is missing")
-    target_count = 0
-    if primitives:
-        target_count = len(primitives[0].get("targets", []))
+    for name in ("breath", "idleLeft", "idleRight"):
+        if name not in custom:
+            errors.append(f"custom {name} expression is missing")
+    meshes = document.get("meshes", [])
+    node_target_counts: dict[int, int] = {}
+    for node_index, node in enumerate(nodes):
+        mesh_index = node.get("mesh")
+        if isinstance(mesh_index, int) and 0 <= mesh_index < len(meshes):
+            mesh_primitives = meshes[mesh_index].get("primitives", [])
+            if mesh_primitives:
+                node_target_counts[node_index] = len(mesh_primitives[0].get("targets", []))
     for expression_name, expression in {**preset, **custom}.items():
         for binding in expression.get("morphTargetBinds", []):
+            node = binding.get("node")
             target_index = binding.get("index")
-            if not isinstance(target_index, int) or not 0 <= target_index < target_count:
+            target_count = node_target_counts.get(node, 0)
+            if not isinstance(node, int) or node not in node_target_counts:
+                errors.append(f"expression {expression_name} has an invalid mesh node")
+            elif not isinstance(target_index, int) or not 0 <= target_index < target_count:
                 errors.append(f"expression {expression_name} has an invalid morph target index")
-            if binding.get("weight") != 1.0:
-                errors.append(f"expression {expression_name} morph target weight must be 1.0")
+            weight = binding.get("weight")
+            if not isinstance(weight, int | float) or not 0.0 <= weight <= 1.0:
+                errors.append(
+                    f"expression {expression_name} morph target weight must be between 0 and 1"
+                )
     return errors
 
 

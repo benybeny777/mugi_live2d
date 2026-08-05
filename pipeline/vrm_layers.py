@@ -19,6 +19,7 @@ class LayerSprite:
     depth: float
     image: Image.Image
     canvas_box: tuple[int, int, int, int]
+    rest_visible: bool = True
 
 
 def _layer_paths(psd: PSDImage) -> dict[str, Layer]:
@@ -37,14 +38,18 @@ def _layer_paths(psd: PSDImage) -> dict[str, Layer]:
 
 
 def _composite_layers(
-    canvas_size: tuple[int, int], layers: dict[str, Layer], paths: list[str]
+    canvas_size: tuple[int, int],
+    layers: dict[str, Layer],
+    paths: list[str],
+    *,
+    ignore_opacity: bool = False,
 ) -> Image.Image:
     canvas = Image.new("RGBA", canvas_size)
     for path in paths:
         layer = layers.get(path)
-        if layer is None or layer.opacity == 0:
+        if layer is None or (layer.opacity == 0 and not ignore_opacity):
             continue
-        rendered = layer.composite(force=True)
+        rendered = layer.topil() if ignore_opacity else layer.composite(force=True)
         if rendered is None:
             continue
         canvas.alpha_composite(rendered.convert("RGBA"), (layer.left, layer.top))
@@ -64,11 +69,13 @@ def _sprite(
     bone: str,
     depth: float,
     image: Image.Image,
+    *,
+    rest_visible: bool = True,
 ) -> LayerSprite:
     alpha_box = image.getchannel("A").getbbox()
     if alpha_box is None:
         raise ValueError(f"VRM layer {name} has no visible pixels")
-    return LayerSprite(name, bone, depth, image.crop(alpha_box), alpha_box)
+    return LayerSprite(name, bone, depth, image.crop(alpha_box), alpha_box, rest_visible)
 
 
 def extract_layer_sprites(psd_path: Path) -> tuple[tuple[int, int], list[LayerSprite]]:
@@ -108,21 +115,20 @@ def extract_layer_sprites(psd_path: Path) -> tuple[tuple[int, int], list[LayerSp
             "/顔/鼻",
         ],
     )
-    left_eye_paths = [
-        "/顔/左白目",
-        "/顔/左瞳",
-        "/顔/左ハイライト",
-        *[f"/顔/左まつげ{index}" for index in range(1, 7)],
-    ]
-    right_eye_paths = [
-        "/顔/右白目",
-        "/顔/右瞳",
-        "/顔/右ハイライト",
-        *[f"/顔/右まつげ{index}" for index in range(1, 8)],
-    ]
-    left_eye = _composite_layers(canvas_size, layers, left_eye_paths)
-    right_eye = _composite_layers(canvas_size, layers, right_eye_paths)
+    left_eye_white = _composite_layers(canvas_size, layers, ["/顔/左白目"])
+    right_eye_white = _composite_layers(canvas_size, layers, ["/顔/右白目"])
+    left_iris = _composite_layers(canvas_size, layers, ["/顔/左瞳", "/顔/左ハイライト"])
+    right_iris = _composite_layers(canvas_size, layers, ["/顔/右瞳", "/顔/右ハイライト"])
+    left_lashes = _composite_layers(
+        canvas_size, layers, [f"/顔/左まつげ{index}" for index in range(1, 7)]
+    )
+    right_lashes = _composite_layers(
+        canvas_size, layers, [f"/顔/右まつげ{index}" for index in range(1, 8)]
+    )
     mouth = _composite_layers(canvas_size, layers, ["/顔/唇", "/顔/上口", "/顔/下口"])
+    mouth_inside = _composite_layers(
+        canvas_size, layers, ["/顔/口中", "/顔/口ハイライト"], ignore_opacity=True
+    )
     front_hair = _composite_layers(
         canvas_size,
         layers,
@@ -144,8 +150,13 @@ def extract_layer_sprites(psd_path: Path) -> tuple[tuple[int, int], list[LayerSp
         _sprite("torso", "spine", -0.010, torso),
         _sprite("neck", "head", 0.000, neck),
         _sprite("face", "head", 0.010, face),
-        _sprite("left_eye", "head", 0.020, left_eye),
-        _sprite("right_eye", "head", 0.021, right_eye),
+        _sprite("left_eye_white", "head", 0.020, left_eye_white),
+        _sprite("right_eye_white", "head", 0.020, right_eye_white),
+        _sprite("left_iris", "head", 0.021, left_iris),
+        _sprite("right_iris", "head", 0.021, right_iris),
+        _sprite("left_lashes", "head", 0.022, left_lashes),
+        _sprite("right_lashes", "head", 0.022, right_lashes),
+        _sprite("mouth_inside", "head", 0.024, mouth_inside, rest_visible=False),
         _sprite("mouth", "head", 0.025, mouth),
         _sprite("front_hair", "head", 0.030, front_hair),
         _sprite("accessory", "head", 0.040, accessory),
@@ -156,5 +167,7 @@ def extract_layer_sprites(psd_path: Path) -> tuple[tuple[int, int], list[LayerSp
 def flatten_sprites(canvas_size: tuple[int, int], sprites: list[LayerSprite]) -> Image.Image:
     canvas = Image.new("RGBA", canvas_size)
     for sprite in sorted(sprites, key=lambda item: item.depth):
+        if not sprite.rest_visible:
+            continue
         canvas.alpha_composite(sprite.image, sprite.canvas_box[:2])
     return canvas

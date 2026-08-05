@@ -20,10 +20,14 @@ def test_generated_vrm_passes_structural_validation(tmp_path: Path) -> None:
     validator = _load_script("validate_vrm")
     output = tmp_path / "mugi.vrm"
 
-    result = builder.build_vrm(ROOT / "source" / "mugi-original.png", output, 256)
+    result = builder.build_vrm(
+        ROOT / "work" / "psd" / "hiyori" / "mugi-hiyori-compatible-final.psd",
+        output,
+        256,
+    )
 
-    assert result["texture"][1] == 256
-    assert result["cardMeters"][1] == 1.8
+    assert result["layers"] == 18
+    assert result["meshes"] == 18
     assert validator.validate(output) == []
     document, _ = validator.read_glb(output)
     vrm = document["extensions"]["VRMC_vrm"]
@@ -35,9 +39,17 @@ def test_generated_vrm_passes_structural_validation(tmp_path: Path) -> None:
         "angry",
         "relaxed",
         "surprised",
+        "lookLeft",
+        "lookRight",
+        "lookUp",
+        "lookDown",
     }
-    assert "breath" in vrm["expressions"]["custom"]
-    assert len(document["meshes"][0]["primitives"][0]["targets"]) == 13
+    assert set(vrm["expressions"]["custom"]) == {"breath", "idleLeft", "idleRight"}
+    assert len(document["meshes"]) == 18
+    animated_meshes = [
+        mesh for mesh in document["meshes"] if mesh["primitives"][0].get("targets")
+    ]
+    assert len(animated_meshes) == 16
 
 
 def test_validator_rejects_non_glb(tmp_path: Path) -> None:

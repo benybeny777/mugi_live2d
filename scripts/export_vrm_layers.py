@@ -30,6 +30,7 @@ def main() -> int:
                 "bone": sprite.bone,
                 "depth": sprite.depth,
                 "canvasBox": list(sprite.canvas_box),
+                "restVisible": sprite.rest_visible,
                 "file": filename,
             }
         )

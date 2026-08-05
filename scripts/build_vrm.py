@@ -12,6 +12,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = ROOT / "source" / "mugi-original.png"
+DEFAULT_PSD = ROOT / "work" / "psd" / "hiyori" / "mugi-hiyori-compatible-final.psd"
 DEFAULT_OUTPUT = ROOT / "exports" / "vrm" / "mugi.vrm"
 LICENSE_URL = (
     "https://github.com/benybeny777/mugi_live2d/"
@@ -263,7 +264,9 @@ def _expression(node: int, index: int, **overrides: str) -> dict[str, Any]:
     }
 
 
-def build_vrm(source: Path, output: Path, max_texture_size: int = 2048) -> dict[str, Any]:
+def build_single_card_vrm(
+    source: Path, output: Path, max_texture_size: int = 2048
+) -> dict[str, Any]:
     texture, texture_size = _texture_png(source, max_texture_size)
     height = 1.8
     width = height * texture_size[0] / texture_size[1]
@@ -464,13 +467,19 @@ def build_vrm(source: Path, output: Path, max_texture_size: int = 2048) -> dict[
     }
 
 
+def build_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048) -> dict[str, Any]:
+    from pipeline.vrm_model import build_layered_vrm
+
+    return build_layered_vrm(psd_path, output, max_texture_size)
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build the Mugi flat-card VRM 1.0 model")
-    parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
+    parser = argparse.ArgumentParser(description="Build the Mugi layered flat-card VRM 1.0 model")
+    parser.add_argument("--psd", type=Path, default=DEFAULT_PSD)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--max-texture-size", type=int, default=2048)
     args = parser.parse_args()
-    result = build_vrm(args.source.resolve(), args.output.resolve(), args.max_texture_size)
+    result = build_vrm(args.psd.resolve(), args.output.resolve(), args.max_texture_size)
     print(json.dumps(result, ensure_ascii=False))
     return 0
 
