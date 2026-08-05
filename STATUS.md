@@ -72,6 +72,21 @@
 - 上半身表示、目の開閉、SDK 5読込をHTMLで確認済み
 - Cubism起動時とHTML viewer起動時にコマンドプロンプトを表示しない構成
 
+## exports/ の構造回帰（最優先）
+
+- `exports/sdk5/mugi/mugi.moc3` と `exports/sdk4/mugi/mugi.moc3` は構造ゲートに落ちる。
+  94 drawable中、実メッシュ18、頂点0が27、4頂点の静止板が47、パラメータ28。
+  顔の目・口が描画されない。`Part3` の26メッシュが空。
+- ディスク上の他のmugi moc3は38個中36個が合格する。作業中の系統は
+  drawable 48〜49、実メッシュ41〜42、頂点0は0、4頂点7、パラメータ29で、別物。
+  つまり `exports/` に入っているのは作業系統とは無関係の古い壊れたモデル。
+- `validate_live2d_exports.py` はテクスチャと物理演算しか見ていなかったため素通りした。
+  viewerと同じ構造上限を実装して不合格になるようにした（`fix: gate exports on MOC mesh structure`）。
+- 差し替え候補は `temp/semantic-underlay-sdk5-reserved-final/` などディスク上にある。
+  ただし候補は8192テクスチャ1枚で、検証は「4096が3枚」を要求する。
+  最終的なテクスチャ構成をどちらにするか未決定のため、検証側の期待値は変更していない。
+- 候補はmodel3.jsonに `EyeBlink` / `LipSync` のGroupsを持たない。差し替え時に付与が要る。
+
 ## 既知の残課題
 
 - HTMLの縮小表示で、左横髪と毛先の境界に細い背景色の線が見える。
@@ -81,9 +96,11 @@
 
 ## 再開位置
 
-0. `face_forehead` は完了。ブリッジ・アトラス・viewerのコミットも完了。origin/mainへpushする。
-0b. `CubismMocExportAgentV3` で組み込み用書き出しを自動起動し、semantic underlay版の
-    moc3/SDK 5出力を得る。viewerで髪の継ぎ目が消えたかを比較し、採用候補を確定して記録する。
+0. `face_forehead` は完了。ブリッジ・アトラス・viewerのコミットとpushも完了。
+0b. underlay候補の比較は完了。`reserved-final` が最良で、記録は `docs/progress/README.md`。
+0c. 次は `exports/` の構造回帰の解消。テクスチャ構成（8192×1か4096×3か）を決め、
+    健全な候補へ差し替え、model3.jsonへGroupsを付け、検証と viewer を通す。
+0d. 髪輪郭の階段状の白い縁はアトラス側の問題。下地メッシュではなくUV/アトラス生成を見る。
 1. balanced候補を固定マスクへ分解し、後髪・口内を補完する。
 2. v2契約の境界、包含、髪の継ぎ目QAを通す。
 3. 合格PSDだけをマスターCMO3へ再インポートする。
