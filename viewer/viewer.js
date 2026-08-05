@@ -1,11 +1,12 @@
 "use strict";
 
 const runtimeScripts = ["vendor/live2dcubismcore.min.js", "vendor/pixi.min.js", "vendor/cubism4.min.js"];
-const viewerVersion = "27";
+const viewerVersion = "28";
 const pageOptions = new URLSearchParams(location.search);
 const demoMode = pageOptions.get("demo") === "1";
 const noMaskDiagnostic = pageOptions.get("nomask") === "1";
 const irisOnlyDiagnostic = pageOptions.get("iris") === "1";
+const staticDiagnostic = pageOptions.get("static") === "1";
 const parameterIds = {
   eyeL: ["ParamEyeLOpen", "PARAM_EYE_L_OPEN"], eyeR: ["ParamEyeROpen", "PARAM_EYE_R_OPEN"],
   mouth: ["ParamMouthOpenY", "PARAM_MOUTH_OPEN_Y"], hairFront: ["ParamHairFront", "PARAM_HAIR_FRONT"],
@@ -13,7 +14,7 @@ const parameterIds = {
   hairAhoge: ["ParamHairAhoge"],
 };
 let app, model, runtimeReady;
-let baseScale = 1, autoBlink = true, hairMotion = true, blinkUntil = 0;
+let baseScale = 1, autoBlink = !staticDiagnostic, hairMotion = !staticDiagnostic, blinkUntil = 0;
 const $ = id => document.getElementById(id);
 const log = message => {
   const stamp = new Date().toLocaleTimeString("ja-JP", { hour12: false });
@@ -370,6 +371,10 @@ $("buildAtlas").addEventListener("click", async () => {
 });
 $("blinkAuto").addEventListener("click", event => { autoBlink = !autoBlink; event.target.classList.toggle("active", autoBlink); event.target.textContent = `自動まばたき ${autoBlink ? "ON" : "OFF"}`; });
 $("hair").addEventListener("click", event => { hairMotion = !hairMotion; event.target.classList.toggle("active", hairMotion); event.target.textContent = `髪揺れ ${hairMotion ? "ON" : "OFF"}`; });
+if (staticDiagnostic) {
+  $("blinkAuto").classList.remove("active"); $("blinkAuto").textContent = "自動まばたき OFF";
+  $("hair").classList.remove("active"); $("hair").textContent = "髪揺れ OFF";
+}
 $("reset").addEventListener("click", () => {
   $("mouth").value = 0; $("zoom").value = 1; $("offset").value = 0; $("mouthValue").value = "0.00"; $("zoomValue").value = "1.00"; $("offsetValue").value = "0"; resizeStage();
 });

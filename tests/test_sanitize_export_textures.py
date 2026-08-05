@@ -107,8 +107,26 @@ def test_topology_rejects_missing_parent_parts(tmp_path: Path) -> None:
         '{"schema":"mugi-live2d/moc-topology@1","drawables":[]}',
         encoding="utf-8",
     )
-    with pytest.raises(ValueError, match="no drawables"):
+    with pytest.raises(ValueError, match="no selected drawables"):
         regions_from_moc_topology(topology, (100, 100), {"PartHair"})
+
+
+def test_topology_can_select_one_exact_drawable(tmp_path: Path) -> None:
+    topology = tmp_path / "topology.json"
+    topology.write_text(
+        """{
+          "schema": "mugi-live2d/moc-topology@1",
+          "drawables": [
+            {"id": "HairA", "parentPartId": "PartHair", "uvs": [0.0, 1.0, 0.1, 0.9]},
+            {"id": "HairB", "parentPartId": "PartHair", "uvs": [0.25, 0.75, 0.5, 0.5]}
+          ]
+        }""",
+        encoding="utf-8",
+    )
+
+    regions = regions_from_moc_topology(topology, (100, 100), set(), {"HairB"})
+
+    assert regions == {"HairB": (25, 25, 25, 25)}
 
 
 def test_region_cleanup_does_not_touch_skin_outside_hair(tmp_path: Path) -> None:

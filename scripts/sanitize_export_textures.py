@@ -28,6 +28,7 @@ def regions_from_moc_topology(
     path: Path,
     texture_size: tuple[int, int],
     parent_parts: set[str],
+    drawable_ids: set[str] | None = None,
 ) -> dict[str, tuple[int, int, int, int]]:
     """Convert selected drawable UV bounds to top-left-origin atlas rectangles.
 
@@ -42,9 +43,11 @@ def regions_from_moc_topology(
     texture_width, texture_height = texture_size
     if texture_width < 1 or texture_height < 1:
         raise ValueError("texture dimensions must be positive")
+    drawable_ids = drawable_ids or set()
     regions: dict[str, tuple[int, int, int, int]] = {}
     for drawable in document.get("drawables", []):
-        if drawable.get("parentPartId") not in parent_parts:
+        identifier = str(drawable.get("id", ""))
+        if drawable.get("parentPartId") not in parent_parts and identifier not in drawable_ids:
             continue
         uvs = drawable.get("uvs", [])
         if len(uvs) < 2 or len(uvs) % 2:
@@ -59,13 +62,12 @@ def regions_from_moc_topology(
         bottom = min(texture_height, math.ceil((1.0 - min(vs)) * texture_height))
         if right <= left or bottom <= top:
             raise ValueError(f"drawable {drawable.get('id')!r} has an empty UV rectangle")
-        identifier = str(drawable.get("id", ""))
         if not identifier or identifier in regions:
             raise ValueError(f"drawable id is missing or duplicated: {identifier!r}")
         regions[identifier] = (left, top, right - left, bottom - top)
     if not regions:
-        selected = ", ".join(sorted(parent_parts))
-        raise ValueError(f"MOC topology contains no drawables for parent parts: {selected}")
+        selected = ", ".join(sorted(parent_parts | drawable_ids))
+        raise ValueError(f"MOC topology contains no selected drawables: {selected}")
     return regions
 
 
@@ -284,6 +286,12 @@ def main() -> int:
         help="Dilate every drawable UV island belonging to this Cubism parent part.",
     )
     parser.add_argument(
+        "--dilate-drawable",
+        action="append",
+        default=[],
+        help="Dilate one exact drawable UV island (repeatable).",
+    )
+    parser.add_argument(
         "--remove-bright-neutral-region-name",
         action="append",
         default=[],
@@ -301,10 +309,11 @@ def main() -> int:
     dilate_names = set(args.dilate_region_name)
     regions = parse_atlas_layout(args.atlas_layout) if args.atlas_layout else {}
     topology_parts = set(args.dilate_parent_part)
-    if args.moc_topology and not topology_parts:
-        parser.error("--moc-topology requires --dilate-parent-part")
-    if topology_parts and not args.moc_topology:
-        parser.error("--dilate-parent-part requires --moc-topology")
+    topology_drawables = set(args.dilate_drawable)
+    if args.moc_topology and not (topology_parts or topology_drawables):
+        parser.error("--moc-topology requires --dilate-parent-part or --dilate-drawable")
+    if (topology_parts or topology_drawables) and not args.moc_topology:
+        parser.error("topology-based dilation requires --moc-topology")
     if (region_names or hair_cap_names or dilate_names) and not regions:
         parser.error("--atlas-layout is required for region operations")
     for directory in args.directories:
@@ -327,13 +336,14 @@ def main() -> int:
             if dilate_names and path.name == "texture_00.png":
                 grown = dilate_region_alpha(path, regions, dilate_names, args.dilate_radius)
                 print(f"{path}: region_dilated={grown} radius={args.dilate_radius}")
-            if topology_parts and path.name == "texture_00.png":
+            if (topology_parts or topology_drawables) and path.name == "texture_00.png":
                 with Image.open(path) as topology_texture:
                     texture_size = topology_texture.size
                 topology_regions = regions_from_moc_topology(
                     args.moc_topology,
                     texture_size,
                     topology_parts,
+                    topology_drawables,
                 )
                 grown = dilate_region_alpha(
                     path,

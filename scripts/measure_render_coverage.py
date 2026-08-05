@@ -161,6 +161,38 @@ def measure(
     )
 
 
+def exterior_growth_pixels(
+    baseline_path: Path,
+    candidate_path: Path,
+    stage: tuple[int, int, int, int],
+    column: int = BACKGROUND_COLUMN,
+    head_fraction: float = 0.35,
+) -> int:
+    """Count candidate pixels added to the baseline head's outside background.
+
+    A dilation can improve the enclosed-hole metric while creating a dark halo
+    around the outer silhouette.  Those added pixels occupy background that was
+    connected to the edge of the baseline head ROI, unlike the enclosed gaps we
+    actually want to close.
+    """
+    baseline = np.asarray(Image.open(baseline_path).convert("RGB"))
+    candidate = np.asarray(Image.open(candidate_path).convert("RGB"))
+    if baseline.shape != candidate.shape:
+        raise ValueError("baseline and candidate renders must have the same dimensions")
+    top, left, height, width = head_bounds(baseline, stage, head_fraction, column)
+    stage_top, stage_left, stage_height, stage_width = stage
+    margin = max(2, int(round(max(height, width) * 0.05)))
+    bottom = min(stage_top + stage_height, top + height + margin)
+    right = min(stage_left + stage_width, left + width + margin)
+    top = max(stage_top, top - margin)
+    left = max(stage_left, left - margin)
+    roi = (top, left, bottom - top, right - left)
+    baseline_background = hole_mask(baseline, roi, column=column)
+    outside = baseline_background & ~interior_hole_mask(baseline_background)
+    candidate_background = hole_mask(candidate, roi, column=column)
+    return int((outside & ~candidate_background).sum())
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("renders", nargs="+", type=Path)
@@ -171,6 +203,7 @@ def main() -> int:
     )
     parser.add_argument("--background-column", type=int, default=BACKGROUND_COLUMN)
     parser.add_argument("--head-fraction", type=float, default=0.35)
+    parser.add_argument("--baseline", type=Path)
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()
     stage = tuple(int(value) for value in args.stage.split(","))
@@ -178,9 +211,16 @@ def main() -> int:
         parser.error("--stage requires top,left,height,width")
     results = {}
     for path in args.renders:
-        results[path.stem] = asdict(
-            measure(path, stage, args.background_column, args.head_fraction)
-        )
+        result = asdict(measure(path, stage, args.background_column, args.head_fraction))
+        if args.baseline:
+            result["exterior_growth_pixels"] = exterior_growth_pixels(
+                args.baseline,
+                path,
+                stage,
+                args.background_column,
+                args.head_fraction,
+            )
+        results[path.stem] = result
     rendered = json.dumps(
         {"stage": list(stage), "background_column": args.background_column, "results": results},
         ensure_ascii=False,

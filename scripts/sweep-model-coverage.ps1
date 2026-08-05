@@ -28,7 +28,7 @@ $rendered = @()
 foreach ($name in $Candidate) {
   $out = Join-Path $shots "$name.png"
   if (Test-Path $out) { Remove-Item $out -Force }
-  $url = "$ViewerBase/viewer/index.html?model=/temp/$name/mugi.model3.json"
+  $url = "$ViewerBase/viewer/index.html?static=1&model=/temp/$name/mugi.model3.json"
   # SwiftShader keeps WebGL working without a GPU, which headless Chrome lacks.
   # Chrome logs USB and GPU warnings to stderr; per AGENTS.md these must go to a
   # file rather than the pipeline, or PowerShell raises them as command failures.
@@ -38,8 +38,21 @@ foreach ($name in $Candidate) {
   )
   $stdout = Join-Path $shots "$name.chrome.out.log"
   $stderr = Join-Path $shots "$name.chrome.err.log"
-  $run = Start-Process -FilePath $chrome -ArgumentList $chromeArgs -Wait -PassThru -NoNewWindow `
-    -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+  try {
+    $run = Start-Process -FilePath $chrome -ArgumentList $chromeArgs -Wait -PassThru -NoNewWindow `
+      -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+  } catch [ArgumentException] {
+    # Some managed runners inject both `Path` and `PATH`. Windows itself can
+    # launch a process with that environment, but Start-Process first copies it
+    # into a case-insensitive dictionary and throws on the duplicate key.
+    # Direct invocation bypasses that dictionary; redirection still keeps noisy
+    # Chrome GPU/USB warnings away from PowerShell's error stream.
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    & $chrome @chromeArgs 1> $stdout 2> $stderr
+    $run = [pscustomobject]@{ ExitCode = $LASTEXITCODE }
+    $ErrorActionPreference = $previousPreference
+  }
   if (-not (Test-Path $out)) { throw "render failed: $name (exit $($run.ExitCode), see $stderr)" }
   Write-Host "rendered $name"
   $rendered += $out
@@ -47,5 +60,6 @@ foreach ($name in $Candidate) {
 
 $python = Join-Path $root '.venv\Scripts\python.exe'
 if (-not (Test-Path $python)) { $python = 'python' }
-& $python (Join-Path $root 'scripts\measure_render_coverage.py') @rendered --stage $Stage --report (Join-Path $root $Report)
+& $python (Join-Path $root 'scripts\measure_render_coverage.py') @rendered --baseline $rendered[0] `
+  --stage $Stage --report (Join-Path $root $Report)
 if ($LASTEXITCODE -ne 0) { throw 'coverage measurement failed' }

@@ -11,6 +11,7 @@ from scripts.measure_render_coverage import (
     background_reference,
     character_bounds,
     clip_mask,
+    exterior_growth_pixels,
     head_bounds,
     hole_mask,
     measure,
@@ -133,6 +134,27 @@ class MeasureTests(unittest.TestCase):
                 measure(path, (0, 0, 60, 60), column=3, head_fraction=1.0)
         finally:
             path.unlink()
+
+    def test_exterior_growth_distinguishes_a_halo_from_an_enclosed_fill(self) -> None:
+        baseline = stage(60, 60)
+        baseline[10:50, 10:50] = HAIR
+        baseline[25:27, 25:27] = stage(60, 60)[25:27, 25:27]
+        candidate = baseline.copy()
+        candidate[25:27, 25:27] = HAIR  # desired enclosed-hole fill
+        candidate[8:10, 10:50] = HAIR  # unwanted exterior halo
+        baseline_path, candidate_path = write(baseline), write(candidate)
+        try:
+            growth = exterior_growth_pixels(
+                baseline_path,
+                candidate_path,
+                (0, 0, 60, 60),
+                column=3,
+                head_fraction=1.0,
+            )
+        finally:
+            baseline_path.unlink()
+            candidate_path.unlink()
+        self.assertEqual(growth, 80)
 
 
 class HeadBoundsTests(unittest.TestCase):
