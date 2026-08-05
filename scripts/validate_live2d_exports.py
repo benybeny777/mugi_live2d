@@ -9,12 +9,21 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import shutil
+import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 from PIL import Image
+
+# The viewer rejects models whose ArtMeshes are empty or are undeformable flat
+# plates, because a PSD stacked as static boards loads without ever animating.
+# The same limits live here so a bad export cannot reach the repository by
+# passing texture and physics checks alone.
+MAX_ZERO_VERTEX_MESHES = 5
+MAX_FLAT_MESHES = 20
 
 EXPECTED_PHYSICS: dict[str, dict[str, Any]] = {
     "後ろ髪": {
@@ -57,6 +66,15 @@ EXPECTED_PHYSICS: dict[str, dict[str, Any]] = {
 
 
 @dataclass(frozen=True)
+class TopologyMetric:
+    drawables: int
+    parameters: int
+    real_meshes: int
+    zero_vertex_meshes: list[str]
+    flat_meshes: list[str]
+
+
+@dataclass(frozen=True)
 class TextureMetric:
     path: str
     width: int
@@ -86,6 +104,68 @@ def texture_metric(path: Path, root: Path) -> TextureMetric:
         nonzero_alpha_pixels=int(np.count_nonzero(alpha)),
         hidden_rgb_pixels=int(np.count_nonzero(hidden_rgb)),
     )
+
+
+def topology_metric(topology: dict[str, Any]) -> TopologyMetric:
+    drawables = topology.get("drawables", [])
+    counts = [(item.get("id", "?"), int(item.get("vertexCount", 0))) for item in drawables]
+    return TopologyMetric(
+        drawables=len(counts),
+        parameters=int(topology.get("parameters", {}).get("count", 0)),
+        real_meshes=sum(1 for _, count in counts if count > 4),
+        zero_vertex_meshes=[name for name, count in counts if count == 0],
+        flat_meshes=[name for name, count in counts if count == 4],
+    )
+
+
+def validate_topology(
+    topology: dict[str, Any],
+    errors: list[str],
+    sdk: str,
+    max_zero: int = MAX_ZERO_VERTEX_MESHES,
+    max_flat: int = MAX_FLAT_MESHES,
+) -> TopologyMetric:
+    metric = topology_metric(topology)
+    if not metric.drawables:
+        errors.append(f"{sdk}: the MOC reports no drawables")
+        return metric
+    # Name a few offenders so the failure points at the parts to repair.
+    if len(metric.zero_vertex_meshes) > max_zero:
+        sample = ", ".join(metric.zero_vertex_meshes[:5])
+        errors.append(
+            f"{sdk}: {len(metric.zero_vertex_meshes)} ArtMeshes have no vertices "
+            f"(limit {max_zero}): {sample}, ..."
+        )
+    if len(metric.flat_meshes) > max_flat:
+        sample = ", ".join(metric.flat_meshes[:5])
+        errors.append(
+            f"{sdk}: {len(metric.flat_meshes)} ArtMeshes are undeformable 4-vertex plates "
+            f"(limit {max_flat}): {sample}, ..."
+        )
+    return metric
+
+
+def extract_topology(root: Path, moc_path: Path, output_path: Path) -> dict[str, Any]:
+    """Read the MOC topology through the local Cubism Core.
+
+    The Core is proprietary and stays out of Git, so this raises a clear error
+    instead of silently skipping the structural gate when it is unavailable.
+    """
+    core = root / "viewer" / "vendor" / "live2dcubismcore.min.js"
+    script = root / "scripts" / "extract_moc_topology.mjs"
+    node = shutil.which("node")
+    if node is None:
+        raise FileNotFoundError("node is required to read MOC topology but was not found on PATH")
+    if not core.is_file():
+        raise FileNotFoundError(f"missing local Cubism Core: {core} (run viewer/setup-runtime.ps1)")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [node, str(script), str(core), str(moc_path), str(output_path)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return load_json(output_path)
 
 
 def validate_physics(data: dict[str, Any], errors: list[str], sdk: str) -> None:
@@ -154,12 +234,22 @@ def validate_sdk(root: Path, sdk: str, min_alpha_sum: float) -> dict[str, Any]:
 
     physics = load_json(physics_path)
     validate_physics(physics, errors, sdk)
+
+    topology: TopologyMetric | None = None
+    try:
+        document = extract_topology(root, moc_path, root / "temp" / "topology" / f"{sdk}.json")
+    except (FileNotFoundError, subprocess.CalledProcessError) as error:
+        errors.append(f"{sdk}: cannot read MOC topology, structural gate not run: {error}")
+    else:
+        topology = validate_topology(document, errors, sdk)
+
     return {
         "sdk": sdk,
         "errors": errors,
         "summed_alpha_percent": alpha_sum,
         "textures": [asdict(item) for item in metrics],
         "physics_groups": [item["Name"] for item in physics["Meta"]["PhysicsDictionary"]],
+        "topology": asdict(topology) if topology else None,
     }
 
 
