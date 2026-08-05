@@ -25,6 +25,19 @@ def test_generated_vrm_passes_structural_validation(tmp_path: Path) -> None:
     assert result["texture"][1] == 256
     assert result["cardMeters"][1] == 1.8
     assert validator.validate(output) == []
+    document, _ = validator.read_glb(output)
+    vrm = document["extensions"]["VRMC_vrm"]
+    assert set(vrm["expressions"]["preset"]) >= {
+        "blink",
+        "aa",
+        "happy",
+        "sad",
+        "angry",
+        "relaxed",
+        "surprised",
+    }
+    assert "breath" in vrm["expressions"]["custom"]
+    assert len(document["meshes"][0]["primitives"][0]["targets"]) == 13
 
 
 def test_validator_rejects_non_glb(tmp_path: Path) -> None:

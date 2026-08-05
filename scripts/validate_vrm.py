@@ -23,6 +23,21 @@ REQUIRED_BONES = {
     "rightLowerArm",
     "rightHand",
 }
+REQUIRED_EXPRESSIONS = {
+    "happy",
+    "angry",
+    "sad",
+    "relaxed",
+    "surprised",
+    "aa",
+    "ih",
+    "ou",
+    "ee",
+    "oh",
+    "blink",
+    "blinkLeft",
+    "blinkRight",
+}
 EXPECTED_PARENTS = {
     "spine": "hips",
     "head": "spine",
@@ -149,6 +164,24 @@ def validate(path: Path) -> list[str]:
         errors.append("no skinned textured card primitive was found")
     if not document.get("skins"):
         errors.append("model has no skin")
+
+    preset = vrm.get("expressions", {}).get("preset", {})
+    missing_expressions = sorted(REQUIRED_EXPRESSIONS - preset.keys())
+    if missing_expressions:
+        errors.append("missing required expressions: " + ", ".join(missing_expressions))
+    custom = vrm.get("expressions", {}).get("custom", {})
+    if "breath" not in custom:
+        errors.append("custom breath expression is missing")
+    target_count = 0
+    if primitives:
+        target_count = len(primitives[0].get("targets", []))
+    for expression_name, expression in {**preset, **custom}.items():
+        for binding in expression.get("morphTargetBinds", []):
+            target_index = binding.get("index")
+            if not isinstance(target_index, int) or not 0 <= target_index < target_count:
+                errors.append(f"expression {expression_name} has an invalid morph target index")
+            if binding.get("weight") != 1.0:
+                errors.append(f"expression {expression_name} morph target weight must be 1.0")
     return errors
 
 
