@@ -1,6 +1,14 @@
-# むぎ Live2D モデル
+# むぎ Live2D / VRM モデル
 
-## 動作プレビュー
+## VRM プレビュー
+
+[![むぎのVRMプレビュー](docs/media/mugi-vrm-preview.gif)](exports/vrm/mugi.vrm)
+
+元絵を透過カードへ貼った VRM 1.0 の A プラン（ペラ板 VRM）です。プレビューは VRM 本体へ
+埋め込んだテクスチャを読み戻して生成しています。画像をクリックすると `mugi.vrm` を開けます。
+仕様、利用条件、再生成・検証方法は [VRM 制作資料](docs/VRM.md)を参照してください。
+
+## Live2D 動作プレビュー
 
 [![むぎのLive2D動作プレビュー](docs/media/mugi-cubism-preview.gif)](docs/media/mugi-cubism-preview.mp4)
 
@@ -15,11 +23,14 @@ HTMLベースのローカル動作確認ツールは `viewer/README.md` を参�
 - `work/cubism/`: Cubism編集ファイル
 - `exports/sdk5/`: Cubism SDK 5向け書き出し
 - `exports/sdk4/`: Cubism SDK 4互換向け書き出し
+- `exports/vrm/`: VRM 1.0 書き出し
 - `reference/`: テンプレートや確認画像（再配布条件を確認して使用）
 
 自動生成処理の実装は `C:\00_PG\30_live` に残し、完成モデルと制作素材だけをここで管理します。
 
-制作手順の正本は `WORKFLOW.md`、現在の進捗は `STATUS.md` です。工程変更時は両方を同じGit変更内で更新します。別キャラクターを新規作成するときは `NEW_CHARACTER.md` を使います。
+Live2D 制作手順の正本は `WORKFLOW.md`、VRM 制作手順は `docs/VRM.md`、現在の進捗は
+`STATUS.md` です。工程変更時は該当する手順書と進捗を同じ Git 変更内で更新します。
+別キャラクターを新規作成するときは `NEW_CHARACTER.md` を使います。
 
 再現可能なモデル生成は、固定済みの高品質リグへ同一トポロジーの画像を適用する[A方式](docs/FIXED_TOPOLOGY_PIPELINE.md)を優先します。入力画像はCubismへ入れる前に境界QAを通します。
 

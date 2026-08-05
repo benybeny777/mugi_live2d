@@ -16,6 +16,10 @@ dev = ["pytest>=8,<10", "ruff>=0.12,<1"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+exclude = ["tools/see-through"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

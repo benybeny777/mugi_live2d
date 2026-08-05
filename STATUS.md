@@ -2,6 +2,15 @@
 
 最終更新: 2026-08-06 JST
 
+## 2026-08-06 VRM Aプラン
+
+- Live2D 版を変更せず、`exports/vrm/mugi.vrm` を独立して追加。
+- 元絵を最大 2048 px の透過テクスチャとして内包した、1.8 m 相当のペラ板 VRM 1.0。
+- VRM 1.0 の必須 Humanoid 15 ボーンを T ポーズ階層で収録。
+- リポジトリ内検証に合格。Khronos glTF Validator はエラー 0、警告 0。
+- `docs/media/mugi-vrm-preview.gif` を README から直接表示し、クリック先を VRM 本体に設定。
+- 現段階では横・背面の立体形状、表情 BlendShape、物理揺れは未実装。
+
 ## 2026-08-06 最終リリース
 
 - `work/cubism/mugi-hiyori-rigged-final.cmo3` を、PSD再取込済みの49 ArtMesh・29 Parameterモデルへ更新。

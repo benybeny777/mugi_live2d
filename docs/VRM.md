@@ -22,11 +22,16 @@ VRM 1.0 の読み込み・表示を最小構成で試すためのモデルです
 ```powershell
 uv run python scripts/build_vrm.py
 uv run python scripts/validate_vrm.py exports/vrm/mugi.vrm
+uv run python scripts/render_vrm_preview.py
 ```
 
 生成スクリプトは元画像から `exports/vrm/mugi.vrm` を再作成します。VRM は Git LFS で管理します。
 検証スクリプトは GLB 構造、VRM 1.0 メタデータ、必須 Humanoid ボーン、ボーン階層、埋め込み画像、
 カードメッシュとスキンを確認します。
+
+プレビュー生成は VRM 本体に埋め込まれたサムネイル画像を読み戻し、README 用の
+`docs/media/mugi-vrm-preview.gif` を作ります。元画像を直接参照しないため、モデルと表示画像の
+取り違えを防げます。
 
 ## 利用条件
 
