@@ -1,6 +1,6 @@
 # 制作状況
 
-最終更新: 2026-08-04 JST
+最終更新: 2026-08-05 JST
 
 ## A方式（固定トポロジー）の進捗
 
@@ -46,6 +46,21 @@
   - 元の顔レイヤーを置換せず、承認した額下地だけを直下へ追加したPSDプレビューは目視合格
 - 未完了: 額下地を含むPSDへの髪・口補完、Cubism再取込
 
+## Cubism editorブリッジの進捗
+
+- 動作中のCubism Editor 5.3のJVMへJavaエージェントをアタッチし、GUI操作なしで
+  ArtMesh複製・予約UV設定・組み込み用書き出し・メニュー起動・状態ダンプを行う。
+  実装は `scripts/cubism_bridge/`、起動は `scripts/*-cubism-*.ps1`。
+- 髪の継ぎ目対策として、`CubismDuplicateUnderlayAgentV12` でArtMeshを縮尺と
+  描画順オフセット付きで複製する下地メッシュ方式（semantic underlay）を試行中。
+- 試行19件のパラメータは `work/cubism/*.cmo3.agent.txt` に記録済み。
+  CMO3本体はマスターとこのブリッジから再生成できるためGitへ入れない。
+- `scripts/sanitize_export_textures.py` にアトラス側のセマンティック下地塗りを実装済み。
+- 未完了: `CubismMocExportAgentV3` による組み込み用書き出しの自動起動。
+  `temp/cubism-menu-listeners.txt` にメニュー階層とActionListenerの列挙まで完了し、
+  「組み込み用ファイル書き出し」の起動検証で中断している。
+- どのunderlay候補が最良かの比較・採否はまだ記録していない。
+
 ## 今回のチェックポイント
 
 - Cubism編集モデル: `work/cubism/mugi-hiyori-rigged-final.cmo3`
@@ -66,7 +81,9 @@
 
 ## 再開位置
 
-0. `face_forehead` は完了。コード・契約・手順をpushする。
+0. `face_forehead` は完了。ブリッジ・アトラス・viewerのコミットも完了。origin/mainへpushする。
+0b. `CubismMocExportAgentV3` で組み込み用書き出しを自動起動し、semantic underlay版の
+    moc3/SDK 5出力を得る。viewerで髪の継ぎ目が消えたかを比較し、採用候補を確定して記録する。
 1. balanced候補を固定マスクへ分解し、後髪・口内を補完する。
 2. v2契約の境界、包含、髪の継ぎ目QAを通す。
 3. 合格PSDだけをマスターCMO3へ再インポートする。
