@@ -1,29 +1,18 @@
 from __future__ import annotations
 
 import argparse
-import io
 import math
 from pathlib import Path
 
-from build_vrm import _morph_offset
 from PIL import Image, ImageDraw
-from validate_vrm import read_glb
+
+from pipeline.vrm_layers import LayerSprite, extract_layer_sprites, flatten_sprites
+from scripts.validate_vrm import read_glb
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MODEL = ROOT / "exports" / "vrm" / "mugi.vrm"
+DEFAULT_PSD = ROOT / "work" / "psd" / "hiyori" / "mugi-hiyori-compatible-final.psd"
 DEFAULT_OUTPUT = ROOT / "docs" / "media" / "mugi-vrm-preview.gif"
-
-
-def extract_thumbnail(model: Path) -> Image.Image:
-    document, binary = read_glb(model)
-    vrm = document["extensions"]["VRMC_vrm"]
-    image_index = vrm["meta"]["thumbnailImage"]
-    image = document["images"][image_index]
-    view = document["bufferViews"][image["bufferView"]]
-    start = view.get("byteOffset", 0)
-    payload = binary[start : start + view["byteLength"]]
-    with Image.open(io.BytesIO(payload)) as opened:
-        return opened.convert("RGBA")
 
 
 def _background(size: tuple[int, int]) -> Image.Image:
@@ -61,61 +50,6 @@ def _expanded_alpha_box(
     )
 
 
-def _warp_card(
-    card: Image.Image,
-    *,
-    crop_box: tuple[int, int, int, int],
-    texture_size: tuple[int, int],
-    weights: dict[str, float],
-    mesh_columns: int = 32,
-    mesh_rows: int = 48,
-) -> Image.Image:
-    texture_width, texture_height = texture_size
-    crop_left, crop_top, crop_right, crop_bottom = crop_box
-    crop_u = crop_left / texture_width
-    crop_v = crop_top / texture_height
-    crop_u_span = (crop_right - crop_left) / texture_width
-    crop_v_span = (crop_bottom - crop_top) / texture_height
-    model_height = 1.8
-    model_width = model_height * texture_width / texture_height
-
-    def source_point(x: float, y: float) -> tuple[float, float]:
-        u = crop_u + (x / card.width) * crop_u_span
-        v = crop_v + (y / card.height) * crop_v_span
-        model_dx = 0.0
-        model_dy = 0.0
-        for name, weight in weights.items():
-            if weight <= 0.0:
-                continue
-            dx, dy, _ = _morph_offset(name, u, v, model_width, model_height)
-            model_dx += dx * weight
-            model_dy += dy * weight
-        pixel_dx = (model_dx / model_width) * card.width / crop_u_span
-        pixel_dy = (-model_dy / model_height) * card.height / crop_v_span
-        return x - pixel_dx, y - pixel_dy
-
-    x_points = [round(card.width * index / mesh_columns) for index in range(mesh_columns + 1)]
-    y_points = [round(card.height * index / mesh_rows) for index in range(mesh_rows + 1)]
-    mesh = []
-    for row in range(mesh_rows):
-        top = y_points[row]
-        bottom = y_points[row + 1]
-        for column in range(mesh_columns):
-            left = x_points[column]
-            right = x_points[column + 1]
-            upper_left = source_point(left, top)
-            lower_left = source_point(left, bottom)
-            lower_right = source_point(right, bottom)
-            upper_right = source_point(right, top)
-            mesh.append(
-                (
-                    (left, top, right, bottom),
-                    (*upper_left, *lower_left, *lower_right, *upper_right),
-                )
-            )
-    return card.transform(card.size, Image.Transform.MESH, mesh, Image.Resampling.BICUBIC)
-
-
 def _pulse(index: int, center: int, radius: int) -> float:
     distance = abs(index - center)
     if distance >= radius:
@@ -123,51 +57,155 @@ def _pulse(index: int, center: int, radius: int) -> float:
     return 0.5 + 0.5 * math.cos(math.pi * distance / radius)
 
 
-def _animation_weights(index: int, frame_count: int) -> dict[str, float]:
-    phase = 2.0 * math.pi * index / frame_count
-    weights = {"breath": 0.5 + 0.5 * math.sin(phase - math.pi / 2.0)}
-    blink = max(
-        _pulse(index, round(frame_count * 0.22), 3), _pulse(index, round(frame_count * 0.78), 3)
+def _transform(
+    image: Image.Image,
+    *,
+    pivot: tuple[float, float],
+    angle: float = 0.0,
+    dx: float = 0.0,
+    dy: float = 0.0,
+    sx: float = 1.0,
+    sy: float = 1.0,
+) -> Image.Image:
+    radians = math.radians(angle)
+    cosine = math.cos(radians)
+    sine = math.sin(radians)
+    a = cosine / sx
+    b = sine / sx
+    d = -sine / sy
+    e = cosine / sy
+    pivot_x, pivot_y = pivot
+    c = pivot_x - a * (pivot_x + dx) - b * (pivot_y + dy)
+    f = pivot_y - d * (pivot_x + dx) - e * (pivot_y + dy)
+    return image.transform(
+        image.size,
+        Image.Transform.AFFINE,
+        (a, b, c, d, e, f),
+        Image.Resampling.BICUBIC,
     )
-    if blink > 0.0:
-        weights["blinkLeft"] = blink
-        weights["blinkRight"] = blink
-    mouth = _pulse(index, round(frame_count * 0.45), 7)
-    if mouth > 0.0:
-        weights["aa"] = 0.42 * mouth
-    return weights
+
+
+def _prepare_layers(
+    canvas_size: tuple[int, int],
+    sprites: list[LayerSprite],
+    crop_box: tuple[int, int, int, int],
+    scale: float,
+) -> dict[str, tuple[LayerSprite, Image.Image, tuple[float, float, float, float]]]:
+    crop_left, crop_top, crop_right, crop_bottom = crop_box
+    surface_size = (
+        round((crop_right - crop_left) * scale),
+        round((crop_bottom - crop_top) * scale),
+    )
+    prepared = {}
+    for sprite in sprites:
+        layer = Image.new("RGBA", surface_size)
+        resized = sprite.image.resize(
+            (
+                max(1, round(sprite.image.width * scale)),
+                max(1, round(sprite.image.height * scale)),
+            ),
+            Image.Resampling.LANCZOS,
+        )
+        left = (sprite.canvas_box[0] - crop_left) * scale
+        top = (sprite.canvas_box[1] - crop_top) * scale
+        right = (sprite.canvas_box[2] - crop_left) * scale
+        bottom = (sprite.canvas_box[3] - crop_top) * scale
+        layer.alpha_composite(resized, (round(left), round(top)))
+        prepared[sprite.name] = (sprite, layer, (left, top, right, bottom))
+    return prepared
+
+
+def _layer_motion(
+    name: str,
+    box: tuple[float, float, float, float],
+    *,
+    sway: float,
+    breath: float,
+    blink: float,
+    mouth: float,
+    gaze: float,
+) -> tuple[dict[str, float | tuple[float, float]], bool]:
+    left, top, right, bottom = box
+    center = ((left + right) / 2, (top + bottom) / 2)
+    motion: dict[str, float | tuple[float, float]] = {"pivot": center}
+    visible = True
+    if name == "torso":
+        motion.update(
+            pivot=((left + right) / 2, bottom),
+            angle=0.14 * sway,
+            sx=1 + 0.004 * breath,
+            sy=1 + 0.002 * breath,
+        )
+    elif "arm" in name:
+        direction = -1.0 if name == "screen_right_arm" else 1.0
+        motion.update(pivot=((left + right) / 2, top), angle=direction * 1.2 * sway)
+    elif "leg" in name:
+        direction = -1.0 if name == "screen_right_leg" else 1.0
+        motion.update(pivot=((left + right) / 2, top), angle=direction * 0.35 * sway)
+    elif name in {"back_hair", "front_hair", "accessory"}:
+        motion.update(pivot=((left + right) / 2, top), angle=-0.22 * sway)
+    elif name in {"left_eye_white", "right_eye_white", "left_lashes", "right_lashes"}:
+        motion.update(sy=max(0.1, 1.0 - 0.9 * blink))
+    elif name in {"left_iris", "right_iris"}:
+        motion.update(dx=2.2 * gaze, sy=max(0.1, 1.0 - 0.9 * blink))
+    elif name == "mouth":
+        motion.update(sx=1.0 + 0.03 * mouth, sy=1.0 + 0.9 * mouth)
+    elif name == "mouth_inside":
+        visible = mouth > 0.02
+        motion.update(sx=1.0 + 0.03 * mouth, sy=0.2 + 1.8 * mouth)
+    return motion, visible
 
 
 def render_preview(
     model: Path,
+    psd: Path,
     output: Path,
     *,
     canvas_size: tuple[int, int] = (520, 640),
     frame_count: int = 80,
 ) -> None:
-    texture = extract_thumbnail(model)
-    texture_size = texture.size
-    crop_box = _expanded_alpha_box(texture)
-    texture = texture.crop(crop_box)
+    read_glb(model)
+    source_size, sprites = extract_layer_sprites(psd)
+    flattened = flatten_sprites(source_size, sprites)
+    crop_box = _expanded_alpha_box(flattened)
     max_width = canvas_size[0] - 72
     max_height = canvas_size[1] - 78
-    scale = min(max_width / texture.width, max_height / texture.height)
-    texture = texture.resize(
-        (round(texture.width * scale), round(texture.height * scale)), Image.Resampling.LANCZOS
+    scale = min(
+        max_width / (crop_box[2] - crop_box[0]),
+        max_height / (crop_box[3] - crop_box[1]),
     )
+    prepared = _prepare_layers(source_size, sprites, crop_box, scale)
+    surface_size = next(iter(prepared.values()))[1].size
     background = _background(canvas_size)
     frames: list[Image.Image] = []
     for index in range(frame_count):
-        card = _warp_card(
-            texture,
-            crop_box=crop_box,
-            texture_size=texture_size,
-            weights=_animation_weights(index, frame_count),
+        phase = 2.0 * math.pi * index / frame_count
+        sway = math.sin(phase)
+        breath = 0.5 - 0.5 * math.cos(phase)
+        blink = max(
+            _pulse(index, round(frame_count * 0.22), 3),
+            _pulse(index, round(frame_count * 0.78), 3),
         )
+        mouth = 0.55 * _pulse(index, round(frame_count * 0.47), 7)
+        gaze = math.sin(phase * 0.5) * 0.7
+        character = Image.new("RGBA", surface_size)
+        for sprite in sorted(sprites, key=lambda item: item.depth):
+            _, layer, box = prepared[sprite.name]
+            motion, visible = _layer_motion(
+                sprite.name,
+                box,
+                sway=sway,
+                breath=breath,
+                blink=blink,
+                mouth=mouth,
+                gaze=gaze,
+            )
+            if visible:
+                character.alpha_composite(_transform(layer, **motion))
         frame = background.copy()
-        x = (canvas_size[0] - card.width) // 2
-        y = canvas_size[1] - card.height - 42
-        frame.alpha_composite(card, (x, y))
+        x = (canvas_size[0] - character.width) // 2
+        y = canvas_size[1] - character.height - 42
+        frame.alpha_composite(character, (x, y))
         frames.append(frame.convert("P", palette=Image.Palette.ADAPTIVE, colors=192))
     output.parent.mkdir(parents=True, exist_ok=True)
     frames[0].save(
@@ -182,11 +220,14 @@ def render_preview(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Render a README preview from the Mugi VRM")
+    parser = argparse.ArgumentParser(
+        description="Render a layered README preview from the Mugi VRM"
+    )
     parser.add_argument("--model", type=Path, default=DEFAULT_MODEL)
+    parser.add_argument("--psd", type=Path, default=DEFAULT_PSD)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
-    render_preview(args.model.resolve(), args.output.resolve())
+    render_preview(args.model.resolve(), args.psd.resolve(), args.output.resolve())
     print(f"VRM preview written: {args.output}")
     return 0
 

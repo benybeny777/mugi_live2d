@@ -2,39 +2,41 @@
 
 ## 方針
 
-最初の VRM 版は、一枚絵を透過カードへ貼った「ペラ板 VRM」です。元の絵柄を保ったまま、
-VRM 1.0 の読み込み・表示を最小構成で試すためのモデルです。Live2D 版は変更しません。
+最初の VRM 版は、完成PSDのパーツを複数の透過カードへ貼った「多層ペラ板 VRM」です。
+元の絵柄を保ったまま、VRM 1.0 の読み込み・表示とパーツ単位の動きを試すモデルです。
+Live2D 版は変更しません。
 
 - 形式: VRM 1.0（GLB コンテナ）
-- テクスチャ: `source/mugi-original.png` を最大 2048 px に縮小してモデル内へ格納
+- テクスチャ: `work/psd/hiyori/mugi-hiyori-compatible-final.psd` から18パーツを抽出して格納
 - 表示: 両面・Unlit・アルファ透過
 - 身長: 1.8 m 相当
-- リグ: VRM 1.0 の必須 Humanoid ボーンを T ポーズ階層で収録
-- メッシュ: 65 × 97、6,305 頂点の変形可能なカード
-- 表情: blink / blinkLeft / blinkRight、5母音、happy / angry / sad / relaxed / surprised
-- アイドル補助: `breath` カスタムモーフ
-- スキン: カード全体を hips にウェイト 1.0 で固定
+- リグ: VRM 1.0 の必須 Humanoid ボーンと chest / neck を階層で収録
+- メッシュ: 後髪、左右の脚、左右の腕、胴体、首、顔、左右の白目・瞳・まつげ、口内、口、前髪、装飾の18枚
+- 表情: blink / blinkLeft / blinkRight、視線4方向、5母音、happy / angry / sad / relaxed / surprised
+- アイドル補助: `breath` / `idleLeft` / `idleRight` カスタム Expression
+- スキン: 各カードを対応する head / spine / upperArm / upperLeg ボーンへ固定
 
-これは正面絵を 3D 空間に立て、局所的なメッシュ変形で顔と呼吸を表現する試作です。
-横・背面の立体形状、腕・脚の個別変形、髪や服の物理揺れはありません。フル 3D VRM へ
-進む場合はモデル本体を差し替えます。
+これは正面絵を 3D 空間に立て、カードごとのメッシュ変形で顔、呼吸、手足、髪の動きを表現する
+試作です。横・背面の立体形状と物理シミュレーションはありません。フル 3D VRM へ進む場合は
+モデル本体を差し替えます。
 
 ## 動きの扱い
 
-- 対応ビューアが標準 Expression を操作すると、まばたき、5母音の口パク、5感情が動きます。
-- `breath` はカスタム Expression です。自動再生されるとは限らず、ビューア側から値を渡します。
-- README の GIF は `breath`、両目の blink、`aa` を穏やかなタイムラインで再生します。
+- 対応ビューアが標準 Expression を操作すると、視線、まばたき、5母音の口パク、5感情が動きます。
+- `breath` / `idleLeft` / `idleRight` はカスタム Expression です。自動再生されるとは限らず、
+  ビューア側から値を渡します。
+- README の GIF は足元を固定し、呼吸、手足と髪の微動、視線、両目の blink、`aa` を穏やかに再生します。
 - GIF のタイムライン自体は VRM に埋め込んでいません。VRM 1.0 の実際の動きは利用側が制御します。
-- 一枚絵由来のため、顔の動きは描き替えではなく局所メッシュ変形です。
+- 一枚絵由来のため、顔の動きは描き替えではなく各カードの変形です。
 
 ## 生成と検証
 
 リポジトリルートで実行します。
 
 ```powershell
-uv run python scripts/build_vrm.py
-uv run python scripts/validate_vrm.py exports/vrm/mugi.vrm
-uv run python scripts/render_vrm_preview.py
+uv run python -m scripts.build_vrm
+uv run python -m scripts.validate_vrm exports/vrm/mugi.vrm
+uv run python -m scripts.render_vrm_preview
 ```
 
 多層カードの抽出結果を個別確認するときは、完成 PSD を変更せず `temp/vrm-layers/` へ書き出します。
@@ -43,13 +45,12 @@ uv run python scripts/render_vrm_preview.py
 uv run python -m scripts.export_vrm_layers
 ```
 
-生成スクリプトは元画像から `exports/vrm/mugi.vrm` を再作成します。VRM は Git LFS で管理します。
+生成スクリプトは完成PSDから `exports/vrm/mugi.vrm` を再作成します。VRM は Git LFS で管理します。
 検証スクリプトは GLB 構造、VRM 1.0 メタデータ、必須 Humanoid ボーン、ボーン階層、埋め込み画像、
-カードメッシュ、スキン、13個のモーフターゲットと各 VRM Expression の結線を確認します。
+18カードメッシュ、スキン、標準17種・カスタム3種の Expression と各モーフの結線を確認します。
 
-プレビュー生成は VRM 本体に埋め込まれたサムネイル画像を読み戻し、README 用の
-`docs/media/mugi-vrm-preview.gif` を作ります。元画像を直接参照しないため、モデルと表示画像の
-取り違えを防げます。
+プレビュー生成は VRM 本体が有効なGLBであることを確認し、モデル生成と同じ決定的なPSDレイヤー抽出を
+使って README 用の `docs/media/mugi-vrm-preview.gif` を作ります。
 
 ## 利用条件
 
@@ -61,7 +62,7 @@ uv run python -m scripts.export_vrm_layers
 - クレジット: 必須
 - 過度な暴力・性的表現、政治・宗教、反社会・ヘイト目的の利用: 不可
 
-条件を変更する場合は `scripts/build_vrm.py` の `VRM_META` とこの節を同じコミットで更新し、
+条件を変更する場合は `pipeline/vrm_model.py` の `VRM_META` とこの節を同じコミットで更新し、
 モデルを再生成してください。
 
 ## 仕様資料
