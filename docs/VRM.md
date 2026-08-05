@@ -37,6 +37,12 @@ uv run python scripts/validate_vrm.py exports/vrm/mugi.vrm
 uv run python scripts/render_vrm_preview.py
 ```
 
+多層カードの抽出結果を個別確認するときは、完成 PSD を変更せず `temp/vrm-layers/` へ書き出します。
+
+```powershell
+uv run python -m scripts.export_vrm_layers
+```
+
 生成スクリプトは元画像から `exports/vrm/mugi.vrm` を再作成します。VRM は Git LFS で管理します。
 検証スクリプトは GLB 構造、VRM 1.0 メタデータ、必須 Humanoid ボーン、ボーン階層、埋め込み画像、
 カードメッシュ、スキン、13個のモーフターゲットと各 VRM Expression の結線を確認します。
