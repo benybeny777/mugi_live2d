@@ -24,6 +24,15 @@
         <button id="load">モデルを読み込む</button>
       </section>
       <section>
+        <h2>固定トポロジーアトラス</h2>
+        <label>部位PNG manifest<input id="partsManifest" value="/temp/atlas-parts/manifest.json"></label>
+        <label>Hiyori基準テクスチャ<input id="referenceTexture" value="/temp/hiyori-reference.2048/texture_00.png"></label>
+        <button id="buildAtlas">読込中モデルのUVへ投影</button>
+        <p id="atlasStatus" class="hint">Hiyori原本MOCを読み込んでから実行します。</p>
+        <a id="atlasDownload" hidden download="mugi-hiyori-fixed-atlas.png">生成アトラスを保存</a>
+        <img id="atlasPreview" hidden alt="生成した固定トポロジーアトラス">
+      </section>
+      <section>
         <h2>表情・動き</h2>
         <div class="button-grid">
           <button id="blink">まばたき</button><button id="blinkAuto" class="toggle active">自動まばたき ON</button>
@@ -36,10 +45,11 @@
       <section>
         <h2>診断</h2>
         <dl><div><dt>読込形式</dt><dd id="loadedFormat">—</dd></div><div><dt>原寸</dt><dd id="dimensions">—</dd></div><div><dt>パラメータ</dt><dd id="parameterCount">—</dd></div><div><dt>ArtMesh</dt><dd id="drawableCount">—</dd></div><div><dt>頂点0</dt><dd id="emptyMeshCount">—</dd></div><div><dt>4頂点</dt><dd id="flatMeshCount">—</dd></div></dl>
+        <details><summary>ArtMesh 構造JSON</summary><pre id="diagnosticJson">—</pre></details>
         <pre id="log" aria-live="polite"></pre>
       </section>
     </aside>
   </main>
-  <script src="viewer.js?v=15"></script>
+  <script src="viewer.js?v=27"></script>
 </body>
 </html>

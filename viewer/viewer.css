@@ -21,6 +21,8 @@ button.toggle { background: #302d24; border-color: #655f4a; } button.toggle.acti
 .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } output { float: right; color: #f5d98d; }
 dl { margin: 0; display: grid; gap: 7px; } dl div { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; } dt { color: #93a095; } dd { margin: 0; }
 pre { min-height: 120px; max-height: 210px; overflow: auto; white-space: pre-wrap; background: #0b0f0c; color: #b6d9ba; padding: 10px; border-radius: 9px; font: 11px/1.45 Consolas, monospace; }
+#atlasPreview { width: 100%; height: auto; margin-top: 10px; background: #1b1b1f; }
+#atlasDownload { display: inline-block; margin-top: 8px; color: #9ee5ab; }
 @media (max-width: 960px) { main { grid-template-columns: 1fr; } .stage-card { min-height: 720px; } }
 .demo-mode { overflow: hidden; background: linear-gradient(#eef5eb, #cadac8); }
 .demo-mode main { display: block; min-height: 100vh; padding: 0; }
