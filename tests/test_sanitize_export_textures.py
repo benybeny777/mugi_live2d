@@ -11,6 +11,7 @@ from scripts.sanitize_export_textures import (
     fill_hair_cap_regions,
     fill_solid_rect,
     parse_atlas_layout,
+    regions_from_moc_topology,
     remove_bright_neutral_regions,
 )
 
@@ -80,6 +81,34 @@ def test_an_empty_region_is_rejected(tmp_path: Path) -> None:
     Image.fromarray(np.zeros((40, 60, 4), dtype=np.uint8), "RGBA").save(texture)
     with pytest.raises(ValueError):
         dilate_region_alpha(texture, {"髪": (0, 0, 60, 40)}, {"髪"}, radius=3)
+
+
+def test_topology_uvs_become_top_left_atlas_rectangles(tmp_path: Path) -> None:
+    topology = tmp_path / "topology.json"
+    topology.write_text(
+        """{
+          "schema": "mugi-live2d/moc-topology@1",
+          "drawables": [
+            {"id": "Hair", "parentPartId": "PartHair", "uvs": [0.25, 0.75, 0.5, 0.5]},
+            {"id": "Eye", "parentPartId": "PartEye", "uvs": [0.0, 1.0, 0.1, 0.9]}
+          ]
+        }""",
+        encoding="utf-8",
+    )
+
+    regions = regions_from_moc_topology(topology, (100, 200), {"PartHair"})
+
+    assert regions == {"Hair": (25, 50, 25, 50)}
+
+
+def test_topology_rejects_missing_parent_parts(tmp_path: Path) -> None:
+    topology = tmp_path / "topology.json"
+    topology.write_text(
+        '{"schema":"mugi-live2d/moc-topology@1","drawables":[]}',
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="no drawables"):
+        regions_from_moc_topology(topology, (100, 100), {"PartHair"})
 
 
 def test_region_cleanup_does_not_touch_skin_outside_hair(tmp_path: Path) -> None:

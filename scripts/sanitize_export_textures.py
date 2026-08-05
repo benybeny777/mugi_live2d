@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import json
+import math
 from collections import deque
 from pathlib import Path
 
@@ -19,6 +21,51 @@ def parse_atlas_layout(path: Path) -> dict[str, tuple[int, int, int, int]]:
             continue
         values = dict(field.split("=", 1) for field in line.split("\t"))
         regions[values["name"]] = tuple(int(values[key]) for key in ("x", "y", "w", "h"))
+    return regions
+
+
+def regions_from_moc_topology(
+    path: Path,
+    texture_size: tuple[int, int],
+    parent_parts: set[str],
+) -> dict[str, tuple[int, int, int, int]]:
+    """Convert selected drawable UV bounds to top-left-origin atlas rectangles.
+
+    Cubism stores UV ``v`` with the origin at the bottom, while PNG rows start
+    at the top.  Keeping each drawable in its own tight rectangle prevents a
+    dilation from crossing into a neighbouring packed island and muddying hair
+    decorations.
+    """
+    document = json.loads(path.read_text(encoding="utf-8"))
+    if document.get("schema") != "mugi-live2d/moc-topology@1":
+        raise ValueError("unsupported MOC topology schema")
+    texture_width, texture_height = texture_size
+    if texture_width < 1 or texture_height < 1:
+        raise ValueError("texture dimensions must be positive")
+    regions: dict[str, tuple[int, int, int, int]] = {}
+    for drawable in document.get("drawables", []):
+        if drawable.get("parentPartId") not in parent_parts:
+            continue
+        uvs = drawable.get("uvs", [])
+        if len(uvs) < 2 or len(uvs) % 2:
+            raise ValueError(f"drawable {drawable.get('id')!r} has invalid UV coordinates")
+        us = [float(value) for value in uvs[0::2]]
+        vs = [float(value) for value in uvs[1::2]]
+        if not all(math.isfinite(value) and 0.0 <= value <= 1.0 for value in (*us, *vs)):
+            raise ValueError(f"drawable {drawable.get('id')!r} has out-of-range UV coordinates")
+        left = max(0, math.floor(min(us) * texture_width))
+        right = min(texture_width, math.ceil(max(us) * texture_width))
+        top = max(0, math.floor((1.0 - max(vs)) * texture_height))
+        bottom = min(texture_height, math.ceil((1.0 - min(vs)) * texture_height))
+        if right <= left or bottom <= top:
+            raise ValueError(f"drawable {drawable.get('id')!r} has an empty UV rectangle")
+        identifier = str(drawable.get("id", ""))
+        if not identifier or identifier in regions:
+            raise ValueError(f"drawable id is missing or duplicated: {identifier!r}")
+        regions[identifier] = (left, top, right - left, bottom - top)
+    if not regions:
+        selected = ", ".join(sorted(parent_parts))
+        raise ValueError(f"MOC topology contains no drawables for parent parts: {selected}")
     return regions
 
 
@@ -229,6 +276,13 @@ def main() -> int:
         help="Remove bright neutral matte remnants from an identified hair page.",
     )
     parser.add_argument("--atlas-layout", type=Path)
+    parser.add_argument("--moc-topology", type=Path)
+    parser.add_argument(
+        "--dilate-parent-part",
+        action="append",
+        default=[],
+        help="Dilate every drawable UV island belonging to this Cubism parent part.",
+    )
     parser.add_argument(
         "--remove-bright-neutral-region-name",
         action="append",
@@ -246,6 +300,11 @@ def main() -> int:
     hair_cap_names = set(args.fill_hair_cap_region_name)
     dilate_names = set(args.dilate_region_name)
     regions = parse_atlas_layout(args.atlas_layout) if args.atlas_layout else {}
+    topology_parts = set(args.dilate_parent_part)
+    if args.moc_topology and not topology_parts:
+        parser.error("--moc-topology requires --dilate-parent-part")
+    if topology_parts and not args.moc_topology:
+        parser.error("--dilate-parent-part requires --moc-topology")
     if (region_names or hair_cap_names or dilate_names) and not regions:
         parser.error("--atlas-layout is required for region operations")
     for directory in args.directories:
@@ -268,6 +327,24 @@ def main() -> int:
             if dilate_names and path.name == "texture_00.png":
                 grown = dilate_region_alpha(path, regions, dilate_names, args.dilate_radius)
                 print(f"{path}: region_dilated={grown} radius={args.dilate_radius}")
+            if topology_parts and path.name == "texture_00.png":
+                with Image.open(path) as topology_texture:
+                    texture_size = topology_texture.size
+                topology_regions = regions_from_moc_topology(
+                    args.moc_topology,
+                    texture_size,
+                    topology_parts,
+                )
+                grown = dilate_region_alpha(
+                    path,
+                    topology_regions,
+                    set(topology_regions),
+                    args.dilate_radius,
+                )
+                print(
+                    f"{path}: topology_islands_dilated={len(topology_regions)} "
+                    f"pixels_grown={grown} radius={args.dilate_radius}"
+                )
             if args.fill_solid_rect and path.name == "texture_00.png":
                 fields = args.fill_solid_rect.split(",")
                 if len(fields) != 5:

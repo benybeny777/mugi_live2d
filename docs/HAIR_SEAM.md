@@ -128,9 +128,20 @@ HTMLの縮小表示で、髪の輪郭に沿って細い背景色の線が見え�
 
 ## 次の一手
 
-1. **UV島ごとの膨張にする。** `extract_moc_topology.mjs` のUVから島の矩形一覧を作り、
-   `--dilate-region-name` へ島ごとに渡す。全面r16が85%まで落とした装飾を、
-   島内に閉じ込めれば保てるはず。半径は島ごとの掃引で決める。
+1. **UV島ごとの膨張にする。** `sanitize_export_textures.py` に
+   `--moc-topology` と `--dilate-parent-part` を実装済み。UVのV軸をPNGの上原点へ変換し、
+   指定した親Partのdrawableごとに独立した矩形内だけを膨張する。変換と選択の単体テストを
+   含む11件は合格。次は次の形で半径を掃引し、全面r16と同じheadless指標で比較する。
+
+   ```powershell
+   uv run python -u scripts/sanitize_export_textures.py temp/<candidate> `
+     --moc-topology temp/normalized-sdk5-topology.json `
+     --dilate-parent-part PartHairBack --dilate-parent-part PartHairFront `
+     --dilate-parent-part PartHairSide --dilate-radius 16
+   ```
+
+   全面r16が85%まで落とした装飾を、島内に閉じ込めれば保てるはず。半径は島ごとの
+   掃引で決める。
 2. **予約UVを実際に効かせる。** `CubismReservedUvAgent` は下地専用のUV領域を確保する
    狙いだったが効いていない（`reserved-final` の下地UV bboxは `central` と同一）。
    膨張で足りない場合の本命。**動作中のCubismが必要。**

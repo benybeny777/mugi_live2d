@@ -13,6 +13,8 @@ qa/*.png
 
 # Local dependency/download caches.
 .uv-cache/
+.uv-python/
+.venv-codex/
 logs/*.log
 logs/*.csv
 tools/see-through/.venv/
