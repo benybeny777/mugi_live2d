@@ -11,6 +11,7 @@ import java.awt.Window;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.io.File;
@@ -19,8 +20,13 @@ import javax.swing.JFrame;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 
-/** Reproducible MOC exporter using Cubism's bundled exporter implementation. */
-final class CubismMocExportAgentImplV3 {
+/** Reproducible MOC exporter using Cubism's bundled exporter implementation.
+ *
+ * The MOC is written before its textures, so the presence of the MOC alone does
+ * not mean the export finished. A completion marker is written last, and only
+ * after every texture has been written, so a caller can wait for that instead.
+ */
+final class CubismMocExportAgentImplV4 {
     public static void agentmain(String argument, Instrumentation ignored) {
         String[] args = argument.split("\\|", -1);
         if (args.length != 3) throw new IllegalArgumentException("expected output|title|sdk");
@@ -59,9 +65,18 @@ final class CubismMocExportAgentImplV3 {
             byte[] bytes = new byte[boxed.size()];
             for (int index = 0; index < boxed.size(); index++) bytes[index] = boxed.get(index);
             Files.write(Path.of(args[0]), bytes);
+            StringBuilder written = new StringBuilder("moc_bytes=").append(bytes.length).append('\n');
             for (int index = 0; index < result.b().size(); index++) {
-                result.b().get(index).getImage().writeImage(new File(args[0] + ".texture_" + index + ".png"));
+                File texture = new File(args[0] + ".texture_" + index + ".png");
+                result.b().get(index).getImage().writeImage(texture);
+                if (!texture.isFile() || texture.length() == 0) {
+                    throw new IllegalStateException("texture not written: " + texture);
+                }
+                written.append("texture_").append(index).append('=').append(texture.length()).append('\n');
             }
+            written.append("textures=").append(result.b().size()).append('\n');
+            // Written last so a caller can treat this file as "export complete".
+            Files.writeString(Path.of(args[0] + ".done.txt"), written.toString(), StandardCharsets.UTF_8);
         } catch (Throwable error) {
             try { Files.writeString(Path.of(args[0] + ".error.txt"), error.toString()); }
             catch (Exception ignoredWriteFailure) { error.printStackTrace(); }
