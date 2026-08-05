@@ -4,6 +4,9 @@ import unittest
 
 from scripts.validate_live2d_exports import (
     EXPECTED_PHYSICS,
+    EXPECTED_TEXTURE_COUNT,
+    EXPECTED_TEXTURE_SIZE,
+    MIN_ALPHA_PERCENT,
     close,
     topology_metric,
     validate_topology,
@@ -20,6 +23,11 @@ def topology(counts: list[int], parameters: int = 29) -> dict:
 
 
 class ValidateLive2DExportsTests(unittest.TestCase):
+    def test_release_uses_one_8192_texture_sheet(self) -> None:
+        self.assertEqual(EXPECTED_TEXTURE_COUNT, 1)
+        self.assertEqual(EXPECTED_TEXTURE_SIZE, (8192, 8192))
+        self.assertEqual(MIN_ALPHA_PERCENT, 6.0)
+
     def test_all_four_hair_groups_are_part_of_the_contract(self) -> None:
         self.assertEqual(set(EXPECTED_PHYSICS), {"後ろ髪", "横髪", "前髪", "アホ毛"})
 

@@ -3,9 +3,7 @@
 	"FileReferences": {
 		"Moc": "mugi.moc3",
 		"Textures": [
-			"mugi.4096/texture_00.png",
-			"mugi.4096/texture_01.png",
-			"mugi.4096/texture_02.png"
+			"mugi.8192/texture_00.png"
 		],
 		"Physics": "mugi.physics3.json",
 		"DisplayInfo": "mugi.cdi3.json"

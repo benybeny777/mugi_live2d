@@ -1,5 +1,6 @@
 package mugi.bridge;
 
+import com.live2d.cubism.doc.model.CModelSource;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Window;
@@ -19,7 +20,7 @@ import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 
 /** Read-only Cubism Editor bridge that exports a validated keyform manifest. */
-final class CubismManifestAgentV3 {
+final class CubismManifestAgentV4 {
     public static void agentmain(String argument, Instrumentation ignored) {
         String[] args = argument.split("\\|", -1);
         if (args.length != 6) {
@@ -31,18 +32,9 @@ final class CubismManifestAgentV3 {
     private static void export(String[] args) {
         Path output = Path.of(args[0]);
         try {
-            JFrame frame = findFrame(args[1]);
-            JTable table = findPartsTable(frame);
-            if (table == null) throw new IllegalStateException("expanded parts table not found");
-
-            List<Object> meshes = new ArrayList<>();
-            for (int row = 0; row < table.getRowCount(); row++) {
-                Object cell = table.getValueAt(row, 3);
-                if (cell == null) continue;
-                Object source = field(cell, "a");
-                if (source.getClass().getName().contains("CArtMeshSource")) meshes.add(source);
-            }
-            if (meshes.isEmpty()) throw new IllegalStateException("no ArtMeshes found; expand all parts first");
+            CModelSource model = findModelSource(args[1]);
+            List<Object> meshes = new ArrayList<>(iterable(model.getAllArtMeshes()));
+            if (meshes.isEmpty()) throw new IllegalStateException("model has no ArtMeshes");
 
             Map<String, String> guidToId = new LinkedHashMap<>();
             for (Object mesh : meshes) {
@@ -204,17 +196,33 @@ final class CubismManifestAgentV3 {
         return result.append((char) 34).toString();
     }
 
-    private static JFrame findFrame(String title) {
+    private static CModelSource findModelSource(String title) throws Exception {
+        JFrame frame = null;
         for (Window window : Window.getWindows()) {
-            if (window instanceof JFrame frame && frame.isVisible() && frame.getTitle().contains(title)) {
-                return frame;
+            if (window instanceof JFrame candidate
+                    && candidate.isVisible()
+                    && candidate.getTitle().contains(title)) {
+                frame = candidate;
+                break;
             }
         }
-        throw new IllegalStateException("visible Cubism document not found: " + title);
+        if (frame == null) throw new IllegalStateException("visible Cubism document not found: " + title);
+        JTable table = findPartsTable(frame);
+        if (table == null) throw new IllegalStateException("parts table not found");
+        for (int row = 0; row < table.getRowCount(); row++) {
+            Object cell = table.getValueAt(row, 3);
+            if (cell == null) continue;
+            Object source = field(cell, "a");
+            if (source.getClass().getName().contains("CArtMeshSource")) {
+                return (CModelSource) field(source, "_modelSource");
+            }
+        }
+        throw new IllegalStateException("model source not found in parts table");
     }
 
     private static JTable findPartsTable(Component component) {
-        if (component instanceof JTable table && component.getClass().getName().contains("CPartsTreeTable")) return table;
+        if (component instanceof JTable table
+                && component.getClass().getName().contains("CPartsTreeTable")) return table;
         if (component instanceof Container container) {
             for (Component child : container.getComponents()) {
                 JTable found = findPartsTable(child);

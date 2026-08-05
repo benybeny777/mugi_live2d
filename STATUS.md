@@ -1,6 +1,18 @@
 # 制作状況
 
-最終更新: 2026-08-05 JST
+最終更新: 2026-08-06 JST
+
+## 2026-08-06 最終リリース
+
+- `work/cubism/mugi-hiyori-rigged-final.cmo3` を、PSD再取込済みの49 ArtMesh・29 Parameterモデルへ更新。
+- `work/psd/hiyori/mugi-hiyori-compatible-final.psd` を修復済みPSDへ更新。
+- 髪の白抜け対策として、既存髪より後ろ・アクセサリーより後ろに描画される専用アンダーレイを追加。
+  静止画QAの白抜け率は5.47%から0.36%へ低下し、星の検出画素は2021pxに対して1991pxを維持。
+- SDK 5 / SDK 4を8192×8192テクスチャ1枚構成で再出力。両方とも49 Drawable、29 Parameter、
+  41実メッシュ、0頂点メッシュなし、EyeBlink / LipSync / 4物理グループを検証済み。
+- 完全透明画素の隠れRGBを除去し、両SDKのリリースゲートは合格。
+- `docs/media/mugi-cubism-preview.mp4` とGIFを更新し、7秒・28フレームの頭振り、まばたき、髪追従を目視確認。
+- 以降の「未完了」「次はexportsの構造回帰」と書かれた旧メモは、この最終リリースで解消済み。
 
 ## A方式（固定トポロジー）の進捗
 

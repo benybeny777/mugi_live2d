@@ -12,10 +12,11 @@ $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 $jdk = Join-Path $repo 'temp\jdk17\jdk-17.0.20+8\bin'
 $source = Join-Path $PSScriptRoot 'cubism_bridge'
+$cubismLib = 'C:\Program Files\Live2D Cubism 5.3\app\lib'
 $build = Join-Path $repo 'temp\cubism-manifest-agent'
 $classes = Join-Path $build 'classes'
 $agentHash = (Get-FileHash (Join-Path $source 'CubismManifestAgent.java') -Algorithm SHA256).Hash.Substring(0, 12).ToLowerInvariant()
-$jar = Join-Path $build "cubism-manifest-agent-v3-$agentHash.jar"
+$jar = Join-Path $build "cubism-manifest-agent-v4-$agentHash.jar"
 $manifest = Join-Path $build 'MANIFEST.MF'
 $resolvedOutput = [IO.Path]::GetFullPath((Join-Path $repo $Output))
 
@@ -25,13 +26,13 @@ if (-not (Test-Path (Join-Path $jdk 'javac.exe'))) {
 New-Item -ItemType Directory -Force $classes | Out-Null
 if (-not (Test-Path $jar)) {
 @"
-Agent-Class: mugi.bridge.CubismManifestAgentV3
+Agent-Class: mugi.bridge.CubismManifestAgentV4
 Can-Redefine-Classes: false
 Can-Retransform-Classes: false
 
 "@ | Set-Content -Path $manifest -Encoding ascii
 
-    & (Join-Path $jdk 'javac.exe') -encoding UTF-8 -d $classes `
+    & (Join-Path $jdk 'javac.exe') -encoding UTF-8 -cp "$cubismLib\*" -d $classes `
         (Join-Path $source 'AttachAgent.java') (Join-Path $source 'CubismManifestAgent.java')
     if ($LASTEXITCODE -ne 0) { throw "javac failed with exit code $LASTEXITCODE" }
     & (Join-Path $jdk 'jar.exe') cfm $jar $manifest -C $classes .

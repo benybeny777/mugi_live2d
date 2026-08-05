@@ -24,6 +24,9 @@ from PIL import Image
 # passing texture and physics checks alone.
 MAX_ZERO_VERTEX_MESHES = 5
 MAX_FLAT_MESHES = 20
+EXPECTED_TEXTURE_COUNT = 1
+EXPECTED_TEXTURE_SIZE = (8192, 8192)
+MIN_ALPHA_PERCENT = 6.0
 
 EXPECTED_PHYSICS: dict[str, dict[str, Any]] = {
     "後ろ髪": {
@@ -195,7 +198,7 @@ def validate_physics(data: dict[str, Any], errors: list[str], sdk: str) -> None:
                 errors.append(f"{sdk}/{name}: {key}={got!r}, expected {wanted!r}")
 
 
-def validate_sdk(root: Path, sdk: str, min_alpha_sum: float) -> dict[str, Any]:
+def validate_sdk(root: Path, sdk: str, min_alpha_percent: float) -> dict[str, Any]:
     directory = root / "exports" / sdk / "mugi"
     errors: list[str] = []
     model_path = directory / "mugi.model3.json"
@@ -213,18 +216,21 @@ def validate_sdk(root: Path, sdk: str, min_alpha_sum: float) -> dict[str, Any]:
     metrics = [texture_metric(path, root) for path in texture_paths if path.is_file()]
     if len(metrics) != len(texture_paths):
         errors.append(f"{sdk}: a model3.json texture reference is missing")
-    if len(metrics) != 3:
-        errors.append(f"{sdk}: expected 3 texture sheets, got {len(metrics)}")
+    if len(metrics) != EXPECTED_TEXTURE_COUNT:
+        errors.append(
+            f"{sdk}: expected {EXPECTED_TEXTURE_COUNT} texture sheet, got {len(metrics)}"
+        )
     for metric in metrics:
-        if (metric.width, metric.height) != (4096, 4096):
-            errors.append(f"{sdk}: {metric.path} is not 4096x4096")
+        if (metric.width, metric.height) != EXPECTED_TEXTURE_SIZE:
+            expected = "x".join(str(value) for value in EXPECTED_TEXTURE_SIZE)
+            errors.append(f"{sdk}: {metric.path} is not {expected}")
         if metric.nonzero_alpha_pixels == 0:
             errors.append(f"{sdk}: {metric.path} is empty")
         if metric.hidden_rgb_pixels:
             errors.append(f"{sdk}: {metric.path} has {metric.hidden_rgb_pixels} hidden RGB pixels")
     alpha_sum = round(sum(item.alpha_percent for item in metrics), 6)
-    if alpha_sum < min_alpha_sum:
-        errors.append(f"{sdk}: summed alpha occupancy {alpha_sum}% < {min_alpha_sum}%")
+    if alpha_sum < min_alpha_percent:
+        errors.append(f"{sdk}: alpha occupancy {alpha_sum}% < {min_alpha_percent}%")
 
     groups = {item.get("Name"): item.get("Ids") for item in model.get("Groups", [])}
     if groups.get("EyeBlink") != ["ParamEyeLOpen", "ParamEyeROpen"]:
@@ -256,11 +262,18 @@ def validate_sdk(root: Path, sdk: str, min_alpha_sum: float) -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument("--min-alpha-sum", type=float, default=15.0)
+    parser.add_argument(
+        "--min-alpha-percent",
+        "--min-alpha-sum",
+        dest="min_alpha_percent",
+        type=float,
+        default=MIN_ALPHA_PERCENT,
+        help="Minimum alpha occupancy for the single 8192 texture sheet.",
+    )
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()
     root = args.root.resolve()
-    results = [validate_sdk(root, sdk, args.min_alpha_sum) for sdk in ("sdk5", "sdk4")]
+    results = [validate_sdk(root, sdk, args.min_alpha_percent) for sdk in ("sdk5", "sdk4")]
     errors = [error for result in results for error in result["errors"]]
     report = {"ok": not errors, "results": results, "errors": errors}
     rendered = json.dumps(report, ensure_ascii=False, indent=2)
