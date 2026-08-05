@@ -1,0 +1,3 @@
+status=ready
+updates=261
+output=C:\00_PG\40_mugi_live2d\work\cubism\mugi-normalized-rig-test.cmo3

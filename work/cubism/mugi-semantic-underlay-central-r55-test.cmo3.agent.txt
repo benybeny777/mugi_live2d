@@ -1,0 +1,8 @@
+status=ready
+source=ArtMesh47
+new=ArtMeshHairUnderlay
+scale=0.9
+right_extent=0.55
+forms=3
+triangles=88
+output=C:\00_PG\40_mugi_live2d\work\cubism\mugi-semantic-underlay-central-r55-test.cmo3

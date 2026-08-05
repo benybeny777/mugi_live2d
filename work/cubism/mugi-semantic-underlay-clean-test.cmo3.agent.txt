@@ -1,0 +1,9 @@
+status=ready
+source=ArtMesh47
+new=ArtMeshHairUnderlay
+scale=0.9
+right_extent=0.78
+forms=3
+triangles=115
+atlas_rect=2304,0,1024,1024
+output=C:\00_PG\40_mugi_live2d\work\cubism\mugi-semantic-underlay-clean-test.cmo3

@@ -1,0 +1,6 @@
+status=ready
+source=ArtMesh47
+new=ArtMeshHairUnderlay
+scale=0.96
+forms=3
+output=C:\00_PG\40_mugi_live2d\work\cubism\mugi-semantic-underlay-096-test.cmo3
