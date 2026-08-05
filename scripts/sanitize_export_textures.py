@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import deque
 from pathlib import Path
 
 import numpy as np
@@ -46,6 +47,96 @@ def remove_bright_neutral_regions(
         region[matte, :] = 0
     Image.fromarray(pixels, "RGBA").save(path, optimize=True)
     return removed
+
+
+def fill_solid_rect(
+    path: Path, rect: tuple[int, int, int, int], colour: tuple[int, int, int]
+) -> int:
+    """Paint an explicitly reserved atlas rectangle with one opaque colour."""
+    image = Image.open(path).convert("RGBA")
+    pixels = np.array(image)
+    x, y, width, height = rect
+    if x < 0 or y < 0 or x + width > image.width or y + height > image.height:
+        raise ValueError("solid rectangle is outside the texture")
+    pixels[y : y + height, x : x + width, :3] = colour
+    pixels[y : y + height, x : x + width, 3] = 255
+    Image.fromarray(pixels, "RGBA").save(path, optimize=True)
+    return width * height
+
+
+def fill_hair_cap_regions(
+    path: Path,
+    regions: dict[str, tuple[int, int, int, int]],
+    names: set[str],
+) -> int:
+    """Fill the enclosed interior of a ring-shaped back-hair texture.
+
+    The face ArtMesh is rendered above the back hair, so the back-hair plate
+    must be a continuous cap behind it. Cutting a face-shaped hole here makes
+    the canvas visible when independently deforming hair moves at its boundary.
+    """
+    image = Image.open(path).convert("RGBA")
+    pixels = np.array(image)
+    changed = 0
+    for name in names:
+        if name not in regions:
+            raise ValueError(f"atlas layout does not contain {name!r}")
+        x, y, width, height = regions[name]
+        region = pixels[y : y + height, x : x + width]
+        opaque = region[:, :, 3] > 0
+        if not opaque.any():
+            raise ValueError(f"atlas region {name!r} has no opaque source pixels")
+        colour = np.median(region[:, :, :3][opaque], axis=0).astype(np.uint8)
+        barrier = opaque.copy()
+        # Close the ring at its lowest row that still has opaque boundaries on
+        # both sides. A fixed percentage is brittle across characters whose
+        # bob/long-hair proportions differ.
+        cutoff = height - 1
+        for candidate in range(cutoff, -1, -1):
+            occupied = np.flatnonzero(opaque[candidate])
+            if occupied.size >= 2 and occupied[-1] - occupied[0] >= width * 0.4:
+                cutoff = candidate
+                break
+        nearby = opaque[max(0, cutoff - 2) : min(height, cutoff + 3)].any(axis=0)
+        occupied_x = np.flatnonzero(nearby)
+        if occupied_x.size < 2:
+            raise ValueError(f"atlas region {name!r} has no hair-ring boundary")
+        barrier[cutoff, occupied_x[0] : occupied_x[-1] + 1] = True
+        outside = np.zeros((height, width), dtype=bool)
+        queue: deque[tuple[int, int]] = deque()
+        for column in range(width):
+            for row in (0, height - 1):
+                if not barrier[row, column] and not outside[row, column]:
+                    outside[row, column] = True
+                    queue.append((row, column))
+        for row in range(height):
+            for column in (0, width - 1):
+                if not barrier[row, column] and not outside[row, column]:
+                    outside[row, column] = True
+                    queue.append((row, column))
+        while queue:
+            row, column = queue.popleft()
+            for next_row, next_column in (
+                (row - 1, column),
+                (row + 1, column),
+                (row, column - 1),
+                (row, column + 1),
+            ):
+                if (
+                    0 <= next_row < height
+                    and 0 <= next_column < width
+                    and not barrier[next_row, next_column]
+                    and not outside[next_row, next_column]
+                ):
+                    outside[next_row, next_column] = True
+                    queue.append((next_row, next_column))
+        cap = ~barrier & ~outside
+        cap[cutoff:, :] = False
+        region[cap, :3] = colour
+        region[cap, 3] = 255
+        changed += int(cap.sum())
+    Image.fromarray(pixels, "RGBA").save(path, optimize=True)
+    return changed
 
 
 def sanitize_texture(
@@ -105,13 +196,16 @@ def main() -> int:
         default=[],
         help="Remove matte pixels only inside this named atlas rectangle (repeatable).",
     )
+    parser.add_argument("--fill-hair-cap-region-name", action="append", default=[])
+    parser.add_argument("--fill-solid-rect", help="x,y,width,height,RRGGBB")
     args = parser.parse_args()
     clear_texture_names = set(args.clear_texture_name)
     remove_bright_neutral_names = set(args.remove_bright_neutral_texture_name)
     region_names = set(args.remove_bright_neutral_region_name)
+    hair_cap_names = set(args.fill_hair_cap_region_name)
     regions = parse_atlas_layout(args.atlas_layout) if args.atlas_layout else {}
-    if region_names and not regions:
-        parser.error("--atlas-layout is required with --remove-bright-neutral-region-name")
+    if (region_names or hair_cap_names) and not regions:
+        parser.error("--atlas-layout is required for region operations")
     for directory in args.directories:
         for path in sorted(directory.rglob("*.png")):
             cleared, page_cleared, matte_removed = sanitize_texture(
@@ -126,6 +220,20 @@ def main() -> int:
             if region_names and path.name == "texture_00.png":
                 region_removed = remove_bright_neutral_regions(path, regions, region_names)
                 print(f"{path}: region_matte_removed={region_removed}")
+            if hair_cap_names and path.name == "texture_00.png":
+                cap_filled = fill_hair_cap_regions(path, regions, hair_cap_names)
+                print(f"{path}: region_hair_cap_filled={cap_filled}")
+            if args.fill_solid_rect and path.name == "texture_00.png":
+                fields = args.fill_solid_rect.split(",")
+                if len(fields) != 5:
+                    parser.error("--fill-solid-rect requires x,y,width,height,RRGGBB")
+                rect = tuple(int(value) for value in fields[:4])
+                hex_colour = fields[4].removeprefix("#")
+                if len(hex_colour) != 6:
+                    parser.error("solid rectangle colour must be RRGGBB")
+                colour = tuple(int(hex_colour[index : index + 2], 16) for index in (0, 2, 4))
+                solid_filled = fill_solid_rect(path, rect, colour)
+                print(f"{path}: solid_rect_filled={solid_filled}")
     return 0
 
 

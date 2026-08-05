@@ -6,6 +6,8 @@ import numpy as np
 from PIL import Image
 
 from scripts.sanitize_export_textures import (
+    fill_hair_cap_regions,
+    fill_solid_rect,
     parse_atlas_layout,
     remove_bright_neutral_regions,
 )
@@ -27,3 +29,31 @@ def test_region_cleanup_does_not_touch_skin_outside_hair(tmp_path: Path) -> None
     assert removed == 9
     assert result[1:4, 1:4, 3].sum() == 0
     assert np.all(result[5:7, 5:7] == (240, 235, 230, 255))
+
+
+def test_hair_cap_fills_enclosed_interior_behind_face(tmp_path: Path) -> None:
+    texture = tmp_path / "texture_00.png"
+    pixels = np.zeros((100, 100, 4), dtype=np.uint8)
+    pixels[10:20, 10:90] = (90, 60, 40, 255)
+    pixels[10:85, 10:15] = (90, 60, 40, 255)
+    pixels[10:85, 85:90] = (90, 60, 40, 255)
+    Image.fromarray(pixels, "RGBA").save(texture)
+
+    changed = fill_hair_cap_regions(texture, {"後ろ髪": (0, 0, 100, 100)}, {"後ろ髪"})
+    result = np.array(Image.open(texture).convert("RGBA"))
+
+    assert changed > 1000
+    assert result[35, 50].tolist() == [90, 60, 40, 255]
+    assert result[80, 50].tolist() == [90, 60, 40, 255]
+
+
+def test_fill_solid_rect_is_limited_to_reserved_area(tmp_path: Path) -> None:
+    texture = tmp_path / "texture_00.png"
+    Image.new("RGBA", (8, 8)).save(texture)
+
+    changed = fill_solid_rect(texture, (2, 1, 3, 4), (112, 84, 72))
+    result = np.array(Image.open(texture).convert("RGBA"))
+
+    assert changed == 12
+    assert result[1, 2].tolist() == [112, 84, 72, 255]
+    assert result[5, 2].tolist() == [0, 0, 0, 0]
