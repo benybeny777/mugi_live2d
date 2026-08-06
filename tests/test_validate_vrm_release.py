@@ -27,7 +27,7 @@ def test_vrm_release_quality_gate() -> None:
         "vertices": 459,
         "facialGridMeshes": 8,
         "presetExpressions": 17,
-        "customExpressions": 3,
+        "customExpressions": 4,
         "springChains": 3,
         "springJoints": 5,
         "phaseVideos": 6,

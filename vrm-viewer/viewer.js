@@ -65,10 +65,6 @@ loader.load(
     [
       "chest",
       "head",
-      "leftUpperArm",
-      "leftLowerArm",
-      "rightUpperArm",
-      "rightLowerArm",
       "leftUpperLeg",
       "leftLowerLeg",
       "rightUpperLeg",
@@ -152,6 +148,7 @@ function applyExpressions(now) {
   const idle = Math.sin(elapsed * 0.8);
   setExpression("idleLeft", autoMotion.checked ? Math.max(0, idle) : 0);
   setExpression("idleRight", autoMotion.checked ? Math.max(0, -idle) : 0);
+  setExpression("greet", autoMotion.checked ? sampleMotionTrack("greet") : 0);
   setExpression("breath", autoMotion.checked ? 0.5 - 0.5 * Math.cos(elapsed * 1.25) : 0);
   if (autoMotion.checked && now >= nextBlinkAt) startBlink(now);
 }
@@ -184,10 +181,6 @@ function applyBoneMotion() {
   const rotations = {
     chest: 0.007 * sway,
     head: 0.01 * delayed,
-    leftUpperArm: 0.012 * sway,
-    leftLowerArm: 0.014 * delayed,
-    rightUpperArm: -0.012 * sway,
-    rightLowerArm: -0.014 * delayed,
     leftUpperLeg: 0.007 * sway,
     leftLowerLeg: -0.009 * delayed,
     rightUpperLeg: -0.007 * sway,
