@@ -139,6 +139,41 @@ def validate(path: Path) -> list[str]:
             if indices[child] not in _descendants(nodes, indices[parent]):
                 errors.append(f"{child} must descend from {parent}")
 
+    spring_bone = document.get("extensions", {}).get("VRMC_springBone")
+    if spring_bone is not None:
+        if spring_bone.get("specVersion") != "1.0":
+            errors.append("VRMC_springBone.specVersion must be 1.0")
+        spring_joint_nodes: set[int] = set()
+        for spring_index, spring in enumerate(spring_bone.get("springs", [])):
+            joints = spring.get("joints", [])
+            if len(joints) < 2:
+                errors.append(f"spring {spring_index} must contain at least two joints")
+            for joint_index, joint in enumerate(joints):
+                node = joint.get("node")
+                if not isinstance(node, int) or not 0 <= node < len(nodes):
+                    errors.append(f"spring {spring_index} joint {joint_index} has an invalid node")
+                    continue
+                if node in spring_joint_nodes:
+                    errors.append(f"spring joint node {node} is used by multiple spring chains")
+                spring_joint_nodes.add(node)
+                if joint_index + 1 < len(joints):
+                    child_node = joints[joint_index + 1].get("node")
+                    if isinstance(child_node, int) and child_node not in _descendants(nodes, node):
+                        errors.append(
+                            f"spring {spring_index} joints must follow the node hierarchy"
+                        )
+                drag_force = joint.get("dragForce")
+                if drag_force is not None and not 0.0 <= drag_force <= 1.0:
+                    errors.append(
+                        f"spring {spring_index} joint {joint_index} dragForce is out of range"
+                    )
+                for nonnegative in ("hitRadius", "stiffness", "gravityPower"):
+                    value = joint.get(nonnegative)
+                    if value is not None and value < 0.0:
+                        errors.append(
+                            f"spring {spring_index} joint {joint_index} {nonnegative} is negative"
+                        )
+
     buffers = document.get("buffers", [])
     if len(buffers) != 1 or buffers[0].get("byteLength", -1) > len(binary):
         errors.append("embedded BIN buffer is missing or shorter than declared")

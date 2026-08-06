@@ -11,7 +11,8 @@
 
 ### VRM 品質アップのフェーズ動画
 
-VRMプレビューの改善履歴です。各GIFをクリックするとMP4版を開けます。
+VRMプレビューの改善履歴です。前フェーズ、現フェーズの順に全画面で再生します。
+各GIFをクリックするとMP4版を開けます。
 
 #### Phase 1：実VRMランタイム
 
@@ -19,11 +20,15 @@ VRMプレビューの改善履歴です。各GIFをクリックするとMP4版�
 
 #### Phase 2：多分割変形メッシュ
 
-[![Phase 1とPhase 2の比較](docs/media/vrm-phase2-deformable-mesh.gif)](docs/media/vrm-phase2-deformable-mesh.mp4)
+[![Phase 1からPhase 2を順番再生](docs/media/vrm-phase2-deformable-mesh.gif)](docs/media/vrm-phase2-deformable-mesh.mp4)
 
 #### Phase 3：顔・表情メッシュ
 
-[![Phase 2とPhase 3の比較](docs/media/vrm-phase3-face-expressions.gif)](docs/media/vrm-phase3-face-expressions.mp4)
+[![Phase 2からPhase 3を順番再生](docs/media/vrm-phase3-face-expressions.gif)](docs/media/vrm-phase3-face-expressions.mp4)
+
+#### Phase 4：髪・アクセサリーSpring Bone
+
+[![Phase 3からPhase 4を順番再生](docs/media/vrm-phase4-spring-bone.gif)](docs/media/vrm-phase4-spring-bone.mp4)
 
 ## Live2D 動作プレビュー
 

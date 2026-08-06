@@ -25,6 +25,7 @@ uv run python viewer/server.py
 - 実際のVRM Expressionを操作
 - 自動呼吸、視線、左右差のある自然なまばたき
 - 5母音の自動口パクと感情デモ、手動の感情切替
+- 後髪・前髪・星アクセサリーのSpring Boneをthree-vrmで直接計算
 - Canvasから5秒WebMを直接録画
 
 動画はブラウザ内で生成され、外部へ送信されません。

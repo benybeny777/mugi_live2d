@@ -47,6 +47,7 @@ loader.load(
     scene.add(vrm.scene);
     [
       "chest",
+      "head",
       "leftUpperArm",
       "leftLowerArm",
       "rightUpperArm",
@@ -61,7 +62,9 @@ loader.load(
     });
     loading.hidden = true;
     const expressionCount = Object.keys(vrm.expressionManager?.expressionMap ?? {}).length;
-    status.textContent = `読込成功・${expressionCount} expressions・実VRM描画中`;
+    const springJointCount = vrm.springBoneManager?.joints.size ?? 0;
+    stage.dataset.springJoints = String(springJointCount);
+    status.textContent = `読込成功・${expressionCount} expressions・${springJointCount} spring joints`;
   },
   (progress) => {
     if (progress.total > 0) loading.textContent = `VRM読込 ${Math.round(progress.loaded / progress.total * 100)}%`;
@@ -139,6 +142,7 @@ function applyBoneMotion() {
   const delayed = autoMotion.checked ? Math.sin(elapsed * 0.8 - 0.45) : 0;
   const rotations = {
     chest: 0.012 * sway,
+    head: 0.018 * delayed,
     leftUpperArm: 0.028 * sway,
     leftLowerArm: 0.035 * delayed,
     rightUpperArm: -0.028 * sway,

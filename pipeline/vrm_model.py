@@ -21,7 +21,7 @@ LICENSE_URL = (
 )
 VRM_META: dict[str, Any] = {
     "name": "むぎ 多層ペラ板 VRM",
-    "version": "3.0.0",
+    "version": "4.0.0",
     "authors": ["benybeny777"],
     "copyrightInformation": "Copyright (c) benybeny777. All rights reserved.",
     "references": ["work/psd/hiyori/mugi-hiyori-compatible-final.psd"],
@@ -111,6 +111,38 @@ def _build_skeleton(
             parent_position = world[parent]
             world[bone] = tuple(parent_position[index] + translation[index] for index in range(3))
     return root, bones, world
+
+
+def _build_spring_skeleton(
+    nodes: list[dict[str, Any]],
+    bones: dict[str, int],
+    bone_world: dict[str, tuple[float, float, float]],
+) -> tuple[dict[str, int], dict[str, tuple[float, float, float]]]:
+    spring_defs = {
+        "backHairRoot": ("BackHairRoot", (0.0, 0.32, 0.0), "head"),
+        "backHairMid": ("BackHairMid", (0.0, -0.17, 0.0), "backHairRoot"),
+        "backHairTip": ("BackHairTip", (0.0, -0.17, 0.0), "backHairMid"),
+        "frontHairRoot": ("FrontHairRoot", (0.0, 0.32, 0.0), "head"),
+        "frontHairMid": ("FrontHairMid", (0.0, -0.11, 0.0), "frontHairRoot"),
+        "frontHairTip": ("FrontHairTip", (0.0, -0.11, 0.0), "frontHairMid"),
+        "accessoryRoot": ("AccessoryRoot", (0.095, 0.26, 0.0), "head"),
+        "accessoryTip": ("AccessoryTip", (0.0, -0.14, 0.0), "accessoryRoot"),
+    }
+    spring_nodes: dict[str, int] = {}
+    spring_world: dict[str, tuple[float, float, float]] = {}
+    for name, (node_name, translation, parent) in spring_defs.items():
+        spring_nodes[name] = _add_node(nodes, node_name, translation)
+        parent_node = bones.get(parent, spring_nodes.get(parent))
+        if parent_node is None:
+            raise ValueError(f"unknown spring bone parent: {parent}")
+        nodes[parent_node].setdefault("children", []).append(spring_nodes[name])
+        parent_position = bone_world.get(parent, spring_world.get(parent))
+        if parent_position is None:
+            raise ValueError(f"unknown spring bone parent position: {parent}")
+        spring_world[name] = tuple(
+            parent_position[index] + translation[index] for index in range(3)
+        )
+    return spring_nodes, spring_world
 
 
 def _png_bytes(image: Image.Image, max_size: tuple[int, int] | None = None) -> bytes:
@@ -212,6 +244,36 @@ def _skin_data(
     joint_lookup: dict[str, int],
 ) -> tuple[list[int], list[float], bool]:
     columns, rows = grid
+    spring_pair: tuple[str, str] | None = None
+    if sprite.name == "back_hair":
+        spring_pair = ("backHairMid", "backHairRoot")
+    elif sprite.name == "front_hair":
+        spring_pair = ("frontHairMid", "frontHairRoot")
+    if spring_pair is not None:
+        lower_joint = joint_lookup[spring_pair[0]]
+        upper_joint = joint_lookup[spring_pair[1]]
+        joints: list[int] = []
+        weights: list[float] = []
+        for row in range(rows + 1):
+            upper_weight = row / rows
+            lower_weight = 1.0 - upper_weight
+            for _ in range(columns + 1):
+                joints.extend(
+                    [
+                        lower_joint if lower_weight > 0.0 else 0,
+                        upper_joint if upper_weight > 0.0 else 0,
+                        0,
+                        0,
+                    ]
+                )
+                weights.extend([lower_weight, upper_weight, 0.0, 0.0])
+        return joints, weights, True
+    if sprite.name == "accessory":
+        accessory_joint = joint_lookup["accessoryRoot"]
+        vertex_count = (columns + 1) * (rows + 1)
+        joints = [accessory_joint, 0, 0, 0] * vertex_count
+        weights = [1.0, 0.0, 0.0, 0.0] * vertex_count
+        return joints, weights, False
     secondary_bone: str | None = None
     if sprite.name == "torso":
         secondary_bone = "chest"
@@ -277,9 +339,6 @@ def _target_names(sprite_name: str) -> list[str]:
         "screen_right_arm",
         "screen_left_leg",
         "screen_right_leg",
-        "back_hair",
-        "front_hair",
-        "accessory",
     }:
         return ["idleLeft", "idleRight"]
     return []
@@ -381,11 +440,6 @@ def _target_vertices(
                 angle *= -1.0
             pivot = bone_world[sprite.bone][:2]
             return [_rotate(point, pivot, angle) for point in base]
-        if sprite.name in {"back_hair", "front_hair", "accessory"}:
-            top = max(point[1] for point in base)
-            bottom = min(point[1] for point in base)
-            span = max(top - bottom, 1e-6)
-            return [(x - direction * 0.008 * (top - y) / span, y, z) for x, y, z in base]
     return base
 
 
@@ -402,7 +456,10 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
     binary = BinaryBuilder()
     nodes: list[dict[str, Any]] = []
     root, bones, bone_world = _build_skeleton(nodes)
-    joint_names = list(bones)
+    spring_nodes, spring_world = _build_spring_skeleton(nodes, bones, bone_world)
+    skin_nodes = {**bones, **spring_nodes}
+    skin_world = {**bone_world, **spring_world}
+    joint_names = list(skin_nodes)
     joint_lookup = {name: index for index, name in enumerate(joint_names)}
 
     accessors: list[dict[str, Any]] = []
@@ -590,7 +647,7 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
 
     inverse_bind_values: list[float] = []
     for name in joint_names:
-        x, y, z = bone_world[name]
+        x, y, z = skin_world[name]
         inverse_bind_values.extend(
             [
                 1.0,
@@ -694,7 +751,7 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
 
     document: dict[str, Any] = {
         "asset": {"version": "2.0", "generator": "mugi_live2d layered VRM builder"},
-        "extensionsUsed": ["VRMC_vrm", "KHR_materials_unlit"],
+        "extensionsUsed": ["VRMC_vrm", "VRMC_springBone", "KHR_materials_unlit"],
         "extensionsRequired": ["VRMC_vrm"],
         "extensions": {
             "VRMC_vrm": {
@@ -710,7 +767,73 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
                     "rangeMapVerticalDown": {"inputMaxValue": 25.0, "outputScale": 1.0},
                     "rangeMapVerticalUp": {"inputMaxValue": 25.0, "outputScale": 1.0},
                 },
-            }
+            },
+            "VRMC_springBone": {
+                "specVersion": "1.0",
+                "springs": [
+                    {
+                        "name": "BackHair",
+                        "center": bones["head"],
+                        "joints": [
+                            {
+                                "node": spring_nodes["backHairRoot"],
+                                "hitRadius": 0.012,
+                                "stiffness": 1.15,
+                                "gravityPower": 0.015,
+                                "gravityDir": [0.0, -1.0, 0.0],
+                                "dragForce": 0.38,
+                            },
+                            {
+                                "node": spring_nodes["backHairMid"],
+                                "hitRadius": 0.01,
+                                "stiffness": 0.9,
+                                "gravityPower": 0.02,
+                                "gravityDir": [0.0, -1.0, 0.0],
+                                "dragForce": 0.32,
+                            },
+                            {"node": spring_nodes["backHairTip"]},
+                        ],
+                    },
+                    {
+                        "name": "FrontHair",
+                        "center": bones["head"],
+                        "joints": [
+                            {
+                                "node": spring_nodes["frontHairRoot"],
+                                "hitRadius": 0.008,
+                                "stiffness": 1.45,
+                                "gravityPower": 0.01,
+                                "gravityDir": [0.0, -1.0, 0.0],
+                                "dragForce": 0.48,
+                            },
+                            {
+                                "node": spring_nodes["frontHairMid"],
+                                "hitRadius": 0.006,
+                                "stiffness": 1.2,
+                                "gravityPower": 0.012,
+                                "gravityDir": [0.0, -1.0, 0.0],
+                                "dragForce": 0.42,
+                            },
+                            {"node": spring_nodes["frontHairTip"]},
+                        ],
+                    },
+                    {
+                        "name": "HairAccessory",
+                        "center": bones["head"],
+                        "joints": [
+                            {
+                                "node": spring_nodes["accessoryRoot"],
+                                "hitRadius": 0.006,
+                                "stiffness": 1.7,
+                                "gravityPower": 0.008,
+                                "gravityDir": [0.0, -1.0, 0.0],
+                                "dragForce": 0.52,
+                            },
+                            {"node": spring_nodes["accessoryTip"]},
+                        ],
+                    },
+                ],
+            },
         },
         "scene": 0,
         "scenes": [{"name": "Mugi Layered VRM", "nodes": [root, *sprite_nodes.values()]}],
@@ -719,7 +842,7 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
         "skins": [
             {
                 "inverseBindMatrices": inverse_bind_accessor,
-                "joints": [bones[name] for name in joint_names],
+                "joints": [skin_nodes[name] for name in joint_names],
                 "skeleton": bones["hips"],
             }
         ],
@@ -773,5 +896,6 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
             and mesh["extras"]["grid"] != [1, 1]
             for mesh in meshes
         ),
+        "springBones": len(document["extensions"]["VRMC_springBone"]["springs"]),
         "expressions": {"preset": len(preset), "custom": len(custom)},
     }

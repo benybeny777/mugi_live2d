@@ -15,16 +15,19 @@ Live2D 版は変更しません。
 - 表情: blink / blinkLeft / blinkRight、視線4方向、5母音、happy / angry / sad / relaxed / surprised
 - アイドル補助: `breath` / `idleLeft` / `idleRight` カスタム Expression
 - スキン: 胴体はspine→chest、手足はupper→lowerへ段階ウェイト。顔パーツはheadへ固定
+- 揺れ物: VRMC_springBone 1.0で後髪・前髪・星アクセサリーの3チェーン、5可動ジョイント
 
 これは正面絵を 3D 空間に立て、カードごとのメッシュ変形で顔、呼吸、手足、髪の動きを表現する
-試作です。横・背面の立体形状と物理シミュレーションはありません。フル 3D VRM へ進む場合は
-モデル本体を差し替えます。
+試作です。横・背面の立体形状はありません。髪とアクセサリーにはSpring Boneを収録していますが、
+正面カードの範囲内で揺れる構成です。フル 3D VRM へ進む場合はモデル本体を差し替えます。
 
 ## 動きの扱い
 
 - 対応ビューアが標準 Expression を操作すると、視線、まばたき、5母音の口パク、5感情が動きます。
 - `breath` / `idleLeft` / `idleRight` はカスタム Expression です。自動再生されるとは限らず、
   ビューア側から値を渡します。
+- 後髪・前髪・星アクセサリーはExpressionによる反復揺れをやめ、対応ランタイムが
+  `VRMC_springBone`を計算したときだけ頭の動きへ遅れて追従します。
 - README の GIF は足元を固定し、呼吸、手足と髪の微動、視線、左右差のある blink、
   5母音と感情の組み合わせを穏やかに再生します。
 - GIF のタイムライン自体は VRM に埋め込んでいません。VRM 1.0 の実際の動きは利用側が制御します。
@@ -40,8 +43,9 @@ README用GIFとは別に、VRM本体のExpressionとボーンをthree-vrmで直�
 | フェーズ | 主な確認内容 | 動画 |
 |---|---|---|
 | Phase 1 | three-vrmで実際のVRM本体を読み込んだ基準映像 | [MP4](media/vrm-phase1-runtime.mp4) |
-| Phase 2 | 4頂点カードと多分割・段階ウェイト版の左右比較 | [MP4](media/vrm-phase2-deformable-mesh.mp4) |
-| Phase 3 | Phase 2と顔格子・自然なまばたき・5母音・感情デモ版の左右比較 | [MP4](media/vrm-phase3-face-expressions.mp4) |
+| Phase 2 | 4頂点カードと多分割・段階ウェイト版を全画面で順番比較 | [MP4](media/vrm-phase2-deformable-mesh.mp4) |
+| Phase 3 | Phase 2と顔格子・自然なまばたき・5母音・感情デモ版を全画面で順番比較 | [MP4](media/vrm-phase3-face-expressions.mp4) |
+| Phase 4 | Phase 3と髪・星アクセサリーのSpring Bone版を全画面で順番比較 | [MP4](media/vrm-phase4-spring-bone.mp4) |
 
 ## 生成と検証
 
@@ -61,8 +65,8 @@ uv run python -m scripts.export_vrm_layers
 
 生成スクリプトは完成PSDから `exports/vrm/mugi.vrm` を再作成します。VRM は Git LFS で管理します。
 検証スクリプトは GLB 構造、VRM 1.0 メタデータ、必須 Humanoid ボーン、ボーン階層、埋め込み画像、
-18カードメッシュ、459頂点、スキン、顔格子8枚、標準17種・カスタム3種の Expression と
-各モーフの結線を確認します。
+18カードメッシュ、459頂点、スキン、顔格子8枚、標準17種・カスタム3種の Expression、
+Spring Bone 3チェーンと各モーフの結線を確認します。
 
 プレビュー生成は VRM 本体が有効なGLBであることを確認し、モデル生成と同じ決定的なPSDレイヤー抽出を
 使って README 用の `docs/media/mugi-vrm-preview.gif` を作ります。
