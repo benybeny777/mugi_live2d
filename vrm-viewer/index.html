@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>むぎ VRM 実機プレビュー</title>
+    <link rel="stylesheet" href="./viewer.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/node_modules/three/build/three.module.js",
+          "three/addons/": "./vendor/node_modules/three/examples/jsm/",
+          "@pixiv/three-vrm": "./vendor/node_modules/@pixiv/three-vrm/lib/three-vrm.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main>
+      <section class="stage-panel">
+        <canvas id="stage" aria-label="むぎVRMプレビュー"></canvas>
+        <div id="loading" class="loading">VRMを読み込んでいます…</div>
+      </section>
+      <aside class="controls">
+        <header>
+          <p class="eyebrow">VRM 1.0 / actual runtime</p>
+          <h1>むぎ VRM 実機プレビュー</h1>
+          <p id="status">初期化中</p>
+        </header>
+
+        <label class="toggle"><input id="auto-motion" type="checkbox" checked /> 自動モーション</label>
+        <label>表情
+          <select id="emotion">
+            <option value="">neutral</option>
+            <option value="happy">happy</option>
+            <option value="angry">angry</option>
+            <option value="sad">sad</option>
+            <option value="relaxed">relaxed</option>
+            <option value="surprised">surprised</option>
+          </select>
+        </label>
+        <label>口の開き <output id="mouth-value">0.00</output>
+          <input id="mouth" type="range" min="0" max="1" value="0" step="0.01" />
+        </label>
+        <label>視線・左右 <output id="look-x-value">0.00</output>
+          <input id="look-x" type="range" min="-1" max="1" value="0" step="0.01" />
+        </label>
+        <label>視線・上下 <output id="look-y-value">0.00</output>
+          <input id="look-y" type="range" min="-1" max="1" value="0" step="0.01" />
+        </label>
+
+        <div class="actions">
+          <button id="blink" type="button">まばたき</button>
+          <button id="record" type="button">5秒録画</button>
+        </div>
+        <p class="note">録画はブラウザ内だけで処理し、WebMとして保存します。外部送信はありません。</p>
+      </aside>
+    </main>
+    <script type="module" src="./viewer.js"></script>
+  </body>
+</html>
