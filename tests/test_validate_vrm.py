@@ -35,6 +35,9 @@ def test_generated_vrm_passes_structural_validation(tmp_path: Path) -> None:
     assert result["springBones"] == 3
     assert validator.validate(output) == []
     document, _ = validator.read_glb(output)
+    assert document["samplers"] == [
+        {"magFilter": 9729, "minFilter": 9729, "wrapS": 33071, "wrapT": 33071}
+    ]
     vrm = document["extensions"]["VRMC_vrm"]
     spring_bone = document["extensions"]["VRMC_springBone"]
     assert spring_bone["specVersion"] == "1.0"

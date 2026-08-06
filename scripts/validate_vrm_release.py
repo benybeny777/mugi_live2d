@@ -78,6 +78,12 @@ def validate_release(root: Path = ROOT) -> tuple[list[str], dict[str, Any]]:
         errors.append("VRM exceeds the 10 MiB A-plan release budget")
 
     readme = (root / "README.md").read_text(encoding="utf-8")
+    for name in ("mugi-vrm-preview.gif", "mugi-vrm-preview.mp4"):
+        path = root / "docs" / "media" / name
+        if not path.is_file() or path.stat().st_size == 0:
+            errors.append(f"missing main VRM preview: {path.relative_to(root)}")
+        if f"docs/media/{name}" not in readme:
+            errors.append(f"README does not link main VRM preview: {name}")
     for index, slug in enumerate(PHASE_SLUGS, start=1):
         gif_path = root / "docs" / "media" / f"{slug}.gif"
         mp4_path = root / "docs" / "media" / f"{slug}.mp4"

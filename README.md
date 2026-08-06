@@ -2,7 +2,7 @@
 
 ## VRM プレビュー
 
-[![むぎのVRMプレビュー](docs/media/mugi-vrm-preview.gif)](exports/vrm/mugi.vrm)
+[![むぎのVRMプレビュー](docs/media/mugi-vrm-preview.gif)](docs/media/mugi-vrm-preview.mp4)
 
 完成PSDを18枚の透過カードへ分けた VRM 1.0 の A プラン（多層ペラ板 VRM）です。髪、顔、目、
 口、胴体、腕、脚を個別メッシュにし、足元を固定した呼吸・視線・まばたき・口パクを再生しています。

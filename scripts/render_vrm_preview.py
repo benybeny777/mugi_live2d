@@ -4,7 +4,7 @@ import argparse
 import math
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 from pipeline.vrm_layers import LayerSprite, extract_layer_sprites, flatten_sprites
 from scripts.validate_vrm import read_glb
@@ -99,13 +99,22 @@ def _prepare_layers(
     prepared = {}
     for sprite in sprites:
         layer = Image.new("RGBA", surface_size)
-        resized = sprite.image.resize(
-            (
-                max(1, round(sprite.image.width * scale)),
-                max(1, round(sprite.image.height * scale)),
-            ),
-            Image.Resampling.LANCZOS,
+        resized = (
+            sprite.image.convert("RGBa")
+            .resize(
+                (
+                    max(1, round(sprite.image.width * scale)),
+                    max(1, round(sprite.image.height * scale)),
+                ),
+                Image.Resampling.LANCZOS,
+            )
+            .convert("RGBA")
         )
+        red, green, blue, alpha = resized.split()
+        rgb = Image.merge("RGB", (red, green, blue)).filter(
+            ImageFilter.UnsharpMask(radius=0.6, percent=75, threshold=3)
+        )
+        resized = Image.merge("RGBA", (*rgb.split(), alpha))
         left = (sprite.canvas_box[0] - crop_left) * scale
         top = (sprite.canvas_box[1] - crop_top) * scale
         right = (sprite.canvas_box[2] - crop_left) * scale
@@ -166,7 +175,7 @@ def render_preview(
     psd: Path,
     output: Path,
     *,
-    canvas_size: tuple[int, int] = (520, 640),
+    canvas_size: tuple[int, int] = (940, 720),
     frame_count: int = 80,
 ) -> None:
     read_glb(model)

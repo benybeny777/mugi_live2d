@@ -467,7 +467,7 @@ def build_single_card_vrm(
     }
 
 
-def build_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048) -> dict[str, Any]:
+def build_vrm(psd_path: Path, output: Path, max_texture_size: int = 4096) -> dict[str, Any]:
     from pipeline.vrm_model import build_layered_vrm
 
     return build_layered_vrm(psd_path, output, max_texture_size)
@@ -477,7 +477,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Build the Mugi layered flat-card VRM 1.0 model")
     parser.add_argument("--psd", type=Path, default=DEFAULT_PSD)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--max-texture-size", type=int, default=2048)
+    parser.add_argument("--max-texture-size", type=int, default=4096)
     args = parser.parse_args()
     result = build_vrm(args.psd.resolve(), args.output.resolve(), args.max_texture_size)
     print(json.dumps(result, ensure_ascii=False))
