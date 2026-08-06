@@ -9,17 +9,21 @@
 画像をクリックすると `mugi.vrm` を開けます。
 仕様、利用条件、再生成・検証方法は [VRM 制作資料](docs/VRM.md)を参照してください。
 
-## VRM 品質アップ比較動画
+### VRM 品質アップのフェーズ動画
 
-各画像をクリックするとMP4版を開けます。
+VRMプレビューの改善履歴です。各GIFをクリックするとMP4版を開けます。
 
-### Phase 1：実VRMランタイム
+#### Phase 1：実VRMランタイム
 
 [![Phase 1 実VRMランタイム](docs/media/vrm-phase1-runtime.gif)](docs/media/vrm-phase1-runtime.mp4)
 
-### Phase 2：多分割変形メッシュ
+#### Phase 2：多分割変形メッシュ
 
 [![Phase 1とPhase 2の比較](docs/media/vrm-phase2-deformable-mesh.gif)](docs/media/vrm-phase2-deformable-mesh.mp4)
+
+#### Phase 3：顔・表情メッシュ
+
+[![Phase 2とPhase 3の比較](docs/media/vrm-phase3-face-expressions.gif)](docs/media/vrm-phase3-face-expressions.mp4)
 
 ## Live2D 動作プレビュー
 
