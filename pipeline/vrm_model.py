@@ -21,7 +21,7 @@ LICENSE_URL = (
 )
 VRM_META: dict[str, Any] = {
     "name": "むぎ 多層ペラ板 VRM",
-    "version": "5.0.0",
+    "version": "6.0.0",
     "authors": ["benybeny777"],
     "copyrightInformation": "Copyright (c) benybeny777. All rights reserved.",
     "references": ["work/psd/hiyori/mugi-hiyori-compatible-final.psd"],
@@ -277,8 +277,6 @@ def _skin_data(
     secondary_bone: str | None = None
     if sprite.name == "torso":
         secondary_bone = "chest"
-    elif "UpperArm" in sprite.bone:
-        secondary_bone = sprite.bone.replace("UpperArm", "LowerArm")
     elif "UpperLeg" in sprite.bone:
         secondary_bone = sprite.bone.replace("UpperLeg", "LowerLeg")
     primary_joint = joint_lookup[sprite.bone]
@@ -334,14 +332,34 @@ def _target_names(sprite_name: str) -> list[str]:
         return ["aa", "ih", "ou", "ee", "oh", "happy", "sad"]
     if sprite_name == "torso":
         return ["breath", "idleLeft", "idleRight"]
-    if sprite_name in {
-        "screen_left_arm",
-        "screen_right_arm",
-        "screen_left_leg",
-        "screen_right_leg",
-    }:
+    if sprite_name == "screen_right_arm":
+        return ["idleLeft", "idleRight", "greet"]
+    if sprite_name in {"screen_left_arm", "screen_left_leg", "screen_right_leg"}:
         return ["idleLeft", "idleRight"]
     return []
+
+
+def _deform_arm_from_shoulder(
+    sprite: LayerSprite,
+    base: list[tuple[float, float, float]],
+    angle_degrees: float,
+) -> list[tuple[float, float, float]]:
+    """Curve a one-piece arm while keeping its inner shoulder seam fixed."""
+    bottom = min(point[1] for point in base)
+    top = max(point[1] for point in base)
+    span = max(top - bottom, 1e-6)
+    inner_x = (
+        max(point[0] for point in base)
+        if sprite.name == "screen_left_arm"
+        else min(point[0] for point in base)
+    )
+    pivot = (inner_x, top)
+    deformed: list[tuple[float, float, float]] = []
+    for point in base:
+        progress = max(0.0, min(1.0, (top - point[1]) / span))
+        eased = progress * progress * (3.0 - 2.0 * progress)
+        deformed.append(_rotate(point, pivot, angle_degrees * eased))
+    return deformed
 
 
 def _target_vertices(
@@ -427,6 +445,8 @@ def _target_vertices(
     if target == "breath":
         anchor = (center[0], min(point[1] for point in base))
         return [_scale(point, anchor, 1.008, 1.004) for point in base]
+    if target == "greet" and sprite.name == "screen_right_arm":
+        return _deform_arm_from_shoulder(sprite, base, 6.0)
     if target in {"idleLeft", "idleRight"}:
         direction = 1.0 if target == "idleLeft" else -1.0
         if sprite.name == "torso":
@@ -434,8 +454,13 @@ def _target_vertices(
             top = max(point[1] for point in base)
             span = max(top - bottom, 1e-6)
             return [(x + direction * 0.006 * (y - bottom) / span, y, z) for x, y, z in base]
-        if "arm" in sprite.name or "leg" in sprite.name:
-            angle = direction * (1.2 if "arm" in sprite.name else 0.35)
+        if "arm" in sprite.name:
+            angle = direction * 0.35
+            if sprite.name.startswith("screen_right"):
+                angle *= -1.0
+            return _deform_arm_from_shoulder(sprite, base, angle)
+        if "leg" in sprite.name:
+            angle = direction * 0.35
             if sprite.name.startswith("screen_right"):
                 angle *= -1.0
             pivot = bone_world[sprite.bone][:2]
@@ -756,6 +781,7 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 4096
         "breath": {"morphTargetBinds": [bind("torso", "breath")]},
         "idleLeft": {"morphTargetBinds": [bind(name, "idleLeft") for name in idle_sprites]},
         "idleRight": {"morphTargetBinds": [bind(name, "idleRight") for name in idle_sprites]},
+        "greet": {"morphTargetBinds": [bind("screen_right_arm", "greet")]},
     }
 
     document: dict[str, Any] = {

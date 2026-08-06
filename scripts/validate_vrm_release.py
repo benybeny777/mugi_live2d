@@ -66,7 +66,7 @@ def validate_release(root: Path = ROOT) -> tuple[list[str], dict[str, Any]]:
         "vertices": 459,
         "facialGridMeshes": 8,
         "presetExpressions": 17,
-        "customExpressions": 3,
+        "customExpressions": 4,
         "springChains": 3,
         "springJoints": 5,
         "phaseVideos": 6,
