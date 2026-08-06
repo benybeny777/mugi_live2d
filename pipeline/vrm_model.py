@@ -21,7 +21,7 @@ LICENSE_URL = (
 )
 VRM_META: dict[str, Any] = {
     "name": "むぎ 多層ペラ板 VRM",
-    "version": "6.0.0",
+    "version": "7.0.0",
     "authors": ["benybeny777"],
     "copyrightInformation": "Copyright (c) benybeny777. All rights reserved.",
     "references": ["work/psd/hiyori/mugi-hiyori-compatible-final.psd"],
@@ -92,11 +92,11 @@ def _build_skeleton(
         "rightLowerLeg": ("RightLowerLeg", (0.0, -0.39, 0.0), "rightUpperLeg"),
         "rightFoot": ("RightFoot", (0.0, -0.34, 0.0), "rightLowerLeg"),
         "leftUpperArm": ("LeftUpperArm", (0.16, 0.05, 0.0), "chest"),
-        "leftLowerArm": ("LeftLowerArm", (0.30, 0.0, 0.0), "leftUpperArm"),
-        "leftHand": ("LeftHand", (0.25, 0.0, 0.0), "leftLowerArm"),
+        "leftLowerArm": ("LeftLowerArm", (0.11, -0.24, 0.0), "leftUpperArm"),
+        "leftHand": ("LeftHand", (0.08, -0.20, 0.0), "leftLowerArm"),
         "rightUpperArm": ("RightUpperArm", (-0.16, 0.05, 0.0), "chest"),
-        "rightLowerArm": ("RightLowerArm", (-0.30, 0.0, 0.0), "rightUpperArm"),
-        "rightHand": ("RightHand", (-0.25, 0.0, 0.0), "rightLowerArm"),
+        "rightLowerArm": ("RightLowerArm", (-0.11, -0.24, 0.0), "rightUpperArm"),
+        "rightHand": ("RightHand", (-0.08, -0.20, 0.0), "rightLowerArm"),
     }
     bones: dict[str, int] = {}
     world: dict[str, tuple[float, float, float]] = {}
@@ -163,7 +163,7 @@ def _quad(sprite: LayerSprite, canvas_size: tuple[int, int]) -> list[tuple[float
     world_right = model_width * (right / canvas_width - 0.5)
     world_top = model_height * (1.0 - top / canvas_height)
     world_bottom = model_height * (1.0 - bottom / canvas_height)
-    if sprite.name == "mouth_inside":
+    if sprite.name == "mouth_inside" or "smile_crease" in sprite.name:
         center = (world_top + world_bottom) / 2.0
         world_top = center
         world_bottom = center
@@ -183,14 +183,18 @@ def _grid_size(sprite_name: str) -> tuple[int, int]:
         "right_iris",
         "left_lashes",
         "right_lashes",
+        "left_brow",
+        "right_brow",
+        "left_smile_crease",
+        "right_smile_crease",
     }:
         return (4, 2)
     if sprite_name in {"mouth", "mouth_inside"}:
         return (5, 2)
     if sprite_name == "torso":
         return (4, 8)
-    if "arm" in sprite_name:
-        return (3, 8)
+    if "arm" in sprite_name or "hand" in sprite_name:
+        return (3, 3)
     if "leg" in sprite_name:
         return (3, 10)
     if sprite_name in {"back_hair", "front_hair"}:
@@ -328,38 +332,60 @@ def _target_names(sprite_name: str) -> list[str]:
         return ["blink", "wide", "lookLeft", "lookRight", "lookUp", "lookDown"]
     if sprite_name in {"left_lashes", "right_lashes"}:
         return ["blink", "wide", "angry", "sad"]
+    if sprite_name in {"left_brow", "right_brow"}:
+        return ["happy", "angry", "sad", "relaxed", "surprised"]
+    if "smile_crease" in sprite_name:
+        return ["happy"]
     if sprite_name in {"mouth", "mouth_inside"}:
         return ["aa", "ih", "ou", "ee", "oh", "happy", "sad"]
     if sprite_name == "torso":
         return ["breath", "idleLeft", "idleRight"]
-    if sprite_name == "screen_right_arm":
+    if sprite_name.startswith("screen_right_") and (
+        "arm" in sprite_name or "hand" in sprite_name
+    ):
         return ["idleLeft", "idleRight", "greet"]
-    if sprite_name in {"screen_left_arm", "screen_left_leg", "screen_right_leg"}:
+    if sprite_name.startswith("screen_left_") and (
+        "arm" in sprite_name or "hand" in sprite_name
+    ):
+        return ["idleLeft", "idleRight"]
+    if sprite_name in {"screen_left_leg", "screen_right_leg"}:
         return ["idleLeft", "idleRight"]
     return []
 
 
-def _deform_arm_from_shoulder(
+def _deform_arm_chain(
     sprite: LayerSprite,
     base: list[tuple[float, float, float]],
-    angle_degrees: float,
+    bone_world: dict[str, tuple[float, float, float]],
+    angles: tuple[float, float, float],
 ) -> list[tuple[float, float, float]]:
-    """Curve a one-piece arm while keeping its inner shoulder seam fixed."""
-    bottom = min(point[1] for point in base)
-    top = max(point[1] for point in base)
-    span = max(top - bottom, 1e-6)
-    inner_x = (
-        max(point[0] for point in base)
-        if sprite.name == "screen_left_arm"
-        else min(point[0] for point in base)
+    """Apply a shoulder/elbow/wrist chain while preserving joint seams."""
+    character_side = "right" if sprite.name.startswith("screen_left_") else "left"
+    bone_names = (
+        f"{character_side}UpperArm",
+        f"{character_side}LowerArm",
+        f"{character_side}Hand",
     )
-    pivot = (inner_x, top)
-    deformed: list[tuple[float, float, float]] = []
+    stage_count = 1
+    if "forearm" in sprite.name:
+        stage_count = 2
+    elif "hand" in sprite.name:
+        stage_count = 3
+
+    transformed: list[tuple[float, float, float]] = []
     for point in base:
-        progress = max(0.0, min(1.0, (top - point[1]) / span))
-        eased = progress * progress * (3.0 - 2.0 * progress)
-        deformed.append(_rotate(point, pivot, angle_degrees * eased))
-    return deformed
+        current = point
+        applied: list[tuple[tuple[float, float], float]] = []
+        for bone_name, angle in zip(bone_names[:stage_count], angles[:stage_count]):
+            pivot3 = bone_world[bone_name]
+            pivot = (pivot3[0], pivot3[1])
+            for earlier_pivot, earlier_angle in applied:
+                rotated = _rotate((pivot[0], pivot[1], 0.0), earlier_pivot, earlier_angle)
+                pivot = (rotated[0], rotated[1])
+            current = _rotate(current, pivot, angle)
+            applied.append((pivot, angle))
+        transformed.append(current)
+    return transformed
 
 
 def _target_vertices(
@@ -379,6 +405,27 @@ def _target_vertices(
         return [(x, close_line + (y - center[1]) * 0.05, z) for x, y, z in base]
     if target == "wide":
         return [_scale(point, center, 1.02, 1.09) for point in base]
+    if "brow" in sprite.name:
+        direction = -1.0 if sprite.name.startswith("left") else 1.0
+        if target == "happy":
+            return [(x, y + 0.006, z) for x, y, z in base]
+        if target == "angry":
+            return [_rotate(point, center, direction * 7.0) for point in base]
+        if target == "sad":
+            return [_rotate(point, center, direction * -6.0) for point in base]
+        if target == "relaxed":
+            return [(x, y - 0.002, z) for x, y, z in base]
+        if target == "surprised":
+            return [(x, y + 0.014, z) for x, y, z in base]
+    if "smile_crease" in sprite.name and target == "happy":
+        columns, rows = _grid_size(sprite.name)
+        source_height = 1.8 * (sprite.canvas_box[3] - sprite.canvas_box[1]) / 4175
+        shaped: list[tuple[float, float, float]] = []
+        for index, (x, _, z) in enumerate(base):
+            row = index // (columns + 1)
+            vertical = row / rows * 2.0 - 1.0
+            shaped.append((x, center[1] + vertical * source_height / 2.0, z))
+        return shaped
     if target.startswith("look"):
         movement = {
             "lookLeft": (0.011, 0.0),
@@ -445,8 +492,8 @@ def _target_vertices(
     if target == "breath":
         anchor = (center[0], min(point[1] for point in base))
         return [_scale(point, anchor, 1.008, 1.004) for point in base]
-    if target == "greet" and sprite.name == "screen_right_arm":
-        return _deform_arm_from_shoulder(sprite, base, 6.0)
+    if target == "greet" and sprite.name.startswith("screen_right_"):
+        return _deform_arm_chain(sprite, base, bone_world, (18.0, -28.0, 18.0))
     if target in {"idleLeft", "idleRight"}:
         direction = 1.0 if target == "idleLeft" else -1.0
         if sprite.name == "torso":
@@ -454,11 +501,11 @@ def _target_vertices(
             top = max(point[1] for point in base)
             span = max(top - bottom, 1e-6)
             return [(x + direction * 0.006 * (y - bottom) / span, y, z) for x, y, z in base]
-        if "arm" in sprite.name:
+        if "arm" in sprite.name or "hand" in sprite.name:
             angle = direction * 0.35
             if sprite.name.startswith("screen_right"):
                 angle *= -1.0
-            return _deform_arm_from_shoulder(sprite, base, angle)
+            return _deform_arm_chain(sprite, base, bone_world, (angle, 0.0, 0.0))
         if "leg" in sprite.name:
             angle = direction * 0.35
             if sprite.name.startswith("screen_right"):
@@ -723,6 +770,8 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 4096
     left_eye_parts = ["right_eye_white", "right_iris", "right_lashes"]
     right_eye_parts = ["left_eye_white", "left_iris", "left_lashes"]
     both_eye_parts = [*left_eye_parts, *right_eye_parts]
+    brow_parts = ["left_brow", "right_brow"]
+    smile_creases = ["left_smile_crease", "right_smile_crease"]
     mouth_parts = ["mouth", "mouth_inside"]
     preset: dict[str, Any] = {
         "blinkLeft": {"morphTargetBinds": [bind(name, "blink") for name in left_eye_parts]},
@@ -740,18 +789,25 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 4096
             "happy": {
                 "morphTargetBinds": [
                     bind("mouth", "happy"),
-                    *[bind(name, "blink", 0.15) for name in both_eye_parts],
+                    *[bind(name, "blink", 0.22) for name in both_eye_parts],
+                    *[bind(name, "happy") for name in brow_parts],
+                    *[bind(name, "happy") for name in smile_creases],
                 ],
                 "overrideMouth": "blend",
             },
             "angry": {
-                "morphTargetBinds": [bind("left_lashes", "angry"), bind("right_lashes", "angry")]
+                "morphTargetBinds": [
+                    bind("left_lashes", "angry"),
+                    bind("right_lashes", "angry"),
+                    *[bind(name, "angry") for name in brow_parts],
+                ]
             },
             "sad": {
                 "morphTargetBinds": [
                     bind("mouth", "sad"),
                     bind("left_lashes", "sad"),
                     bind("right_lashes", "sad"),
+                    *[bind(name, "sad") for name in brow_parts],
                 ],
                 "overrideMouth": "blend",
             },
@@ -759,6 +815,7 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 4096
                 "morphTargetBinds": [
                     bind("mouth", "happy", 0.35),
                     *[bind(name, "blink", 0.35) for name in both_eye_parts],
+                    *[bind(name, "relaxed") for name in brow_parts],
                 ],
                 "overrideBlink": "blend",
                 "overrideMouth": "blend",
@@ -768,6 +825,7 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 4096
                     *[bind(name, "wide") for name in both_eye_parts],
                     bind("mouth", "oh", 0.8),
                     bind("mouth_inside", "oh", 0.8),
+                    *[bind(name, "surprised") for name in brow_parts],
                 ],
                 "overrideBlink": "blend",
                 "overrideMouth": "blend",
@@ -781,7 +839,19 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 4096
         "breath": {"morphTargetBinds": [bind("torso", "breath")]},
         "idleLeft": {"morphTargetBinds": [bind(name, "idleLeft") for name in idle_sprites]},
         "idleRight": {"morphTargetBinds": [bind(name, "idleRight") for name in idle_sprites]},
-        "greet": {"morphTargetBinds": [bind("screen_right_arm", "greet")]},
+        "greet": {
+            "morphTargetBinds": [
+                bind("screen_right_upper_arm", "greet"),
+                bind("screen_right_forearm", "greet"),
+                bind("screen_right_hand", "greet"),
+            ]
+        },
+        "sleepy": {
+            "morphTargetBinds": [
+                *[bind(name, "blink", 0.58) for name in both_eye_parts],
+                *[bind(name, "relaxed") for name in brow_parts],
+            ]
+        },
     }
 
     document: dict[str, Any] = {

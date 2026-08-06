@@ -4,40 +4,12 @@
 
 [![むぎのVRMプレビュー](docs/media/mugi-vrm-preview.gif)](docs/media/mugi-vrm-preview.mp4)
 
-完成PSDを18枚の透過カードへ分けた VRM 1.0 の A プラン（多層ペラ板 VRM）です。髪、顔、目、
+完成PSDを26枚の透過メッシュへ分けた VRM 1.0 の A プラン（多層ペラ板 VRM）です。髪、顔、目、眉、
 口、胴体、腕、脚を個別メッシュにし、足元を固定した呼吸・視線・まばたき・口パクを再生しています。
-腕は肩の内側を固定した専用モーフで動かし、胴体との隙間が開かないようにしています。
+左右の腕は上腕・前腕・手へ3分割し、肩・肘・手首を連鎖変形させて継ぎ目が開かないようにしています。
+最新プレビューでは自動モーションと happy・surprised・sleepy の表情変化を確認できます。
 画像をクリックすると高品質MP4を開けます。VRM本体は [`mugi.vrm`](exports/vrm/mugi.vrm) です。
 仕様、利用条件、再生成・検証方法は [VRM 制作資料](docs/VRM.md)を参照してください。
-
-### VRM 品質アップのフェーズ動画
-
-VRMプレビューの改善履歴です。前フェーズ、現フェーズの順に全画面で再生します。
-各GIFをクリックするとMP4版を開けます。
-
-#### Phase 1：実VRMランタイム
-
-[![Phase 1 実VRMランタイム](docs/media/vrm-phase1-runtime.gif)](docs/media/vrm-phase1-runtime.mp4)
-
-#### Phase 2：多分割変形メッシュ
-
-[![Phase 1からPhase 2を順番再生](docs/media/vrm-phase2-deformable-mesh.gif)](docs/media/vrm-phase2-deformable-mesh.mp4)
-
-#### Phase 3：顔・表情メッシュ
-
-[![Phase 2からPhase 3を順番再生](docs/media/vrm-phase3-face-expressions.gif)](docs/media/vrm-phase3-face-expressions.mp4)
-
-#### Phase 4：髪・アクセサリーSpring Bone
-
-[![Phase 3からPhase 4を順番再生](docs/media/vrm-phase4-spring-bone.gif)](docs/media/vrm-phase4-spring-bone.mp4)
-
-#### Phase 5：自然動作タイムライン
-
-[![Phase 4からPhase 5を順番再生](docs/media/vrm-phase5-motion-timeline.gif)](docs/media/vrm-phase5-motion-timeline.mp4)
-
-#### Phase 6：リリース品質
-
-[![Phase 1からPhase 6を順番再生](docs/media/vrm-phase6-release-quality.gif)](docs/media/vrm-phase6-release-quality.mp4)
 
 最終構造と動画リンクの検査結果は[VRM品質レポート](docs/VRM_QUALITY_REPORT.md)にまとめています。
 

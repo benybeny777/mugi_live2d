@@ -2,50 +2,46 @@
 
 検証日: 2026-08-06 JST
 
-## プレビュー鮮明度改善
+## 最新版の改善内容
 
-- VRM内テクスチャ上限を2048から4096へ変更し、顔テクスチャを273x282から546x564へ改善。
-- 透過画像はpremultiplied alphaで縮小し、板ポリ表示のminFilterをLinearへ変更。
-- 録画は2倍ピクセル密度・不透明な濃紺背景で行い、READMEのGIFから高品質MP4を開けるようにした。
-- 同じ940x720フレームの輪郭指標は435.55から1248.31、平均勾配は3.93から4.82へ改善。
-- VRM容量は3,377,664 bytesで、10 MiBのAプラン上限内。
-- 腕1枚パーツと横向き上腕・前腕ボーンの不一致を解消し、肩固定の`greet`モーフへ変更。
-- 挨拶時に胴体と袖の間へ出ていた黒い隙間がないことをthree-vrm実機で確認。
+- 左右の腕を上腕・前腕・手へ3分割し、肩・肘・手首を連鎖変形
+- 眉を独立メッシュ化し、happy / angry / sad / relaxed / surprised を描き分け
+- 目尻の笑い線と sleepy 表情を追加
+- 5母音を滑らかに補間し、ローカル音声ファイルの周波数帯から口形を推定
+- 後髪・顔・前髪・星アクセサリーへ微小な奥行き視差を追加
+- greet の腕振りを強めつつ、足元は固定
+- READMEプレビューを最新版のGIF/MP4だけに整理
 
-## リリース判定
-
-Phase 6の品質ゲートに合格しています。Live2D版とPicoAgent実装は検査・変更対象外です。
+Live2D版とPicoAgent実装は検査・変更対象外です。
 
 | 項目 | 結果 |
 |---|---:|
 | VRM形式 | VRM 1.0 / GLB |
-| メッシュ | 18 |
-| 頂点 | 459 |
-| 顔格子メッシュ | 8 |
-| 標準 / カスタムExpression | 17 / 4 |
+| メッシュ | 26 |
+| 頂点 | 543 |
+| 顔格子メッシュ | 12 |
+| 標準 / カスタムExpression | 17 / 5 |
+| 腕分割 | 左右各3、合計6 |
 | Spring Bone | 3チェーン / 5可動ジョイント |
 | モーション状態 | idle / greet / talk |
-| READMEフェーズ動画 | Phase 1〜6 |
-| 内部VRM検証 | 合格 |
-| Khronos glTF Validator | エラー0 / 警告0 |
+| README動画 | 最新GIF / MP4のみ |
 
 ## 自動検証
 
-リポジトリルートで次を実行します。
-
 ```powershell
 uv run python -m scripts.validate_vrm_release
+uv run python -m scripts.validate_vrm_visual
 uv run pytest -q
 uv run ruff check .
 node --check vrm-viewer/viewer.js
 ```
 
-`validate_vrm_release`はVRM本体だけでなく、READMEからPhase 1〜6のGIF/MP4を開けること、
-GIFの表示解像度、MP4コンテナ、タイムラインの状態順も検査します。
+`validate_vrm_release`はVRM構造、Expression、Spring Bone、容量、READMEの最新版リンクを検査します。
+`validate_vrm_visual`は最新版GIFの解像度、フレーム数、目視可能な動き、足元の固定、腕6分割、眉2分割を検査します。
 
 ## 目視確認
 
-- three-vrm 3.5.3で実VRMを読み込み、20 Expressionと5 Spring Jointの初期化を確認。
-- 自然なまばたき、5母音、感情、idle/greet/talk、髪と星アクセサリーの遅れ揺れを確認。
-- 足元は固定され、旧プレビューにあった全身の横滑り・周期的な不自然な揺れはありません。
-- README動画は横並びを使わず、前段階から現段階を全画面で順番再生します。
+- three-vrm 3.5.3で22 Expressionと5 Spring Jointを初期化
+- happy / angry / surprised / sleepy の表情と眉・まぶたの連動を確認
+- greetで肩・肘・手首の継ぎ目が開かないことを確認
+- 足元を固定したまま、呼吸・視線・まばたき・口形・髪の遅れを確認

@@ -9,6 +9,8 @@ const status = document.querySelector("#status");
 const motionState = document.querySelector("#motion-state");
 const autoMotion = document.querySelector("#auto-motion");
 const emotion = document.querySelector("#emotion");
+const audioFile = document.querySelector("#audio-file");
+const audioStatus = document.querySelector("#audio-status");
 const mouth = document.querySelector("#mouth");
 const lookX = document.querySelector("#look-x");
 const lookY = document.querySelector("#look-y");
@@ -36,6 +38,14 @@ const blinkDuration = 190;
 let elapsed = 0;
 let motionTimeline = null;
 const boneRest = new Map();
+const parallaxRest = new Map();
+let parallaxLookX = 0;
+let parallaxLookY = 0;
+let smoothedMouth = 0;
+let audioContext = null;
+let audioAnalyser = null;
+let audioSource = null;
+let audioFrequencyData = null;
 
 fetch("./motions/mugi-timeline.json")
   .then((response) => {
@@ -72,6 +82,10 @@ loader.load(
     ].forEach((name) => {
       const bone = vrm.humanoid?.getNormalizedBoneNode(name);
       if (bone) boneRest.set(name, { bone, quaternion: bone.quaternion.clone() });
+    });
+    ["back_hair", "face", "front_hair", "accessory"].forEach((name) => {
+      const node = vrm.scene.getObjectByName(name);
+      if (node) parallaxRest.set(name, { node, position: node.position.clone() });
     });
     loading.hidden = true;
     const expressionCount = Object.keys(vrm.expressionManager?.expressionMap ?? {}).length;
@@ -114,9 +128,48 @@ function updateControls() {
   document.querySelector("#look-y-value").value = Number(lookY.value).toFixed(2);
 }
 
+function analysedVowels() {
+  if (!audioAnalyser || !audioFrequencyData || !audioContext) return null;
+  audioAnalyser.getByteFrequencyData(audioFrequencyData);
+  const nyquist = audioContext.sampleRate / 2;
+  const band = (low, high) => {
+    const start = Math.max(0, Math.floor(low / nyquist * audioFrequencyData.length));
+    const end = Math.min(audioFrequencyData.length, Math.ceil(high / nyquist * audioFrequencyData.length));
+    if (end <= start) return 0;
+    let sum = 0;
+    for (let index = start; index < end; index += 1) sum += audioFrequencyData[index];
+    return sum / (end - start) / 255;
+  };
+  const low = band(120, 700);
+  const middle = band(700, 1800);
+  const high = band(1800, 3800);
+  const raw = {
+    aa: low * 0.55 + middle * 0.45,
+    ih: middle * 0.35 + high * 0.65,
+    ou: low * 0.75 + middle * 0.25,
+    ee: middle * 0.55 + high * 0.45,
+    oh: low * 0.62 + middle * 0.38,
+  };
+  const peak = Math.max(...Object.values(raw), 0.001);
+  const strength = THREE.MathUtils.clamp((low + middle + high) * 0.72, 0, 1);
+  return Object.fromEntries(Object.entries(raw).map(([name, value]) => [name, value / peak * strength]));
+}
+
+function scriptedVowels(strength) {
+  const vowels = ["aa", "ih", "ou", "ee", "oh"];
+  const position = elapsed / 0.46;
+  const index = Math.floor(position) % vowels.length;
+  const linear = position - Math.floor(position);
+  const mix = linear * linear * (3 - 2 * linear);
+  return {
+    [vowels[index]]: strength * (1 - mix),
+    [vowels[(index + 1) % vowels.length]]: strength * mix,
+  };
+}
+
 function applyExpressions(now) {
   if (!vrm) return;
-  clearGroup(["happy", "angry", "sad", "relaxed", "surprised"]);
+  clearGroup(["happy", "angry", "sad", "relaxed", "surprised", "sleepy"]);
   const motion = currentMotion();
   const activeEmotion = emotion.value || (autoMotion.checked ? motion.emotion : "");
   if (activeEmotion) setExpression(activeEmotion, activeEmotion === "surprised" ? 0.72 : 0.82);
@@ -124,10 +177,7 @@ function applyExpressions(now) {
   let mouthValue = Number(mouth.value);
   let horizontal = Number(lookX.value);
   let vertical = Number(lookY.value);
-  let activeVowel = "aa";
   if (autoMotion.checked) {
-    const vowels = ["aa", "ih", "ou", "ee", "oh"];
-    activeVowel = vowels[Math.floor(elapsed / 0.52) % vowels.length];
     const speechStrength = motion.name === "talk" ? 0.52 : motion.name === "greet" ? 0.18 : 0.05;
     mouthValue = Math.max(
       mouthValue,
@@ -137,13 +187,17 @@ function applyExpressions(now) {
     vertical = Math.sin(elapsed * 0.31) * 0.25;
   }
   clearGroup(["aa", "ih", "ou", "ee", "oh", "blink"]);
-  setExpression(activeVowel, mouthValue);
+  smoothedMouth += (mouthValue - smoothedMouth) * 0.24;
+  const vowelWeights = analysedVowels() ?? scriptedVowels(smoothedMouth);
+  Object.entries(vowelWeights).forEach(([name, value]) => setExpression(name, value));
   setExpression("blinkLeft", blinkCurve(now));
   setExpression("blinkRight", blinkCurve(now, 18));
   setExpression("lookLeft", Math.max(0, horizontal));
   setExpression("lookRight", Math.max(0, -horizontal));
   setExpression("lookUp", Math.max(0, vertical));
   setExpression("lookDown", Math.max(0, -vertical));
+  parallaxLookX = horizontal;
+  parallaxLookY = vertical;
 
   const idle = Math.sin(elapsed * 0.8);
   setExpression("idleLeft", autoMotion.checked ? Math.max(0, idle) : 0);
@@ -151,6 +205,22 @@ function applyExpressions(now) {
   setExpression("greet", autoMotion.checked ? sampleMotionTrack("greet") : 0);
   setExpression("breath", autoMotion.checked ? 0.5 - 0.5 * Math.cos(elapsed * 1.25) : 0);
   if (autoMotion.checked && now >= nextBlinkAt) startBlink(now);
+}
+
+function applyLayerParallax() {
+  const sway = autoMotion.checked ? Math.sin(elapsed * 0.8) : 0;
+  const offsets = {
+    back_hair: [-0.0012, -0.0005],
+    face: [0.0006, 0.0004],
+    front_hair: [0.0020, 0.0010],
+    accessory: [0.0028, 0.0014],
+  };
+  parallaxRest.forEach(({ node, position }, name) => {
+    const [factorX, factorY] = offsets[name] ?? [0, 0];
+    node.position.copy(position);
+    node.position.x += factorX * (parallaxLookX + sway * 0.22);
+    node.position.y += factorY * parallaxLookY;
+  });
 }
 
 function currentMotion() {
@@ -217,12 +287,38 @@ function animate(now) {
   resize();
   applyExpressions(now);
   applyBoneMotion();
+  applyLayerParallax();
   vrm?.update(delta);
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
 
 [mouth, lookX, lookY].forEach((control) => control.addEventListener("input", updateControls));
+audioFile.addEventListener("change", async () => {
+  const file = audioFile.files?.[0];
+  if (!file) return;
+  try {
+    audioSource?.stop();
+  } catch {
+    // An already-ended BufferSource cannot be stopped twice.
+  }
+  audioContext ??= new AudioContext();
+  await audioContext.resume();
+  const buffer = await audioContext.decodeAudioData(await file.arrayBuffer());
+  audioAnalyser = audioContext.createAnalyser();
+  audioAnalyser.fftSize = 1024;
+  audioFrequencyData = new Uint8Array(audioAnalyser.frequencyBinCount);
+  audioSource = audioContext.createBufferSource();
+  audioSource.buffer = buffer;
+  audioSource.connect(audioAnalyser);
+  audioAnalyser.connect(audioContext.destination);
+  audioSource.addEventListener("ended", () => {
+    audioAnalyser = null;
+    audioStatus.value = "再生終了";
+  });
+  audioSource.start();
+  audioStatus.value = `再生中: ${file.name}`;
+});
 blinkButton.addEventListener("click", () => { startBlink(performance.now()); });
 recordButton.addEventListener("click", () => {
   renderer.setPixelRatio(2);
