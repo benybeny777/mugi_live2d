@@ -124,6 +124,7 @@ def _layer_motion(
     blink: float,
     mouth: float,
     gaze: float,
+    gesture: float,
 ) -> tuple[dict[str, float | tuple[float, float]], bool]:
     left, top, right, bottom = box
     center = ((left + right) / 2, (top + bottom) / 2)
@@ -132,18 +133,22 @@ def _layer_motion(
     if name == "torso":
         motion.update(
             pivot=((left + right) / 2, bottom),
-            angle=0.14 * sway,
-            sx=1 + 0.004 * breath,
-            sy=1 + 0.002 * breath,
+            angle=0.28 * sway,
+            sx=1 + 0.007 * breath,
+            sy=1 + 0.004 * breath,
         )
     elif "arm" in name:
         direction = -1.0 if name == "screen_right_arm" else 1.0
-        motion.update(pivot=((left + right) / 2, top), angle=direction * 1.2 * sway)
+        greeting = 4.0 * gesture if name == "screen_left_arm" else 0.0
+        motion.update(
+            pivot=((left + right) / 2, top),
+            angle=direction * 2.0 * sway + greeting,
+        )
     elif "leg" in name:
         direction = -1.0 if name == "screen_right_leg" else 1.0
-        motion.update(pivot=((left + right) / 2, top), angle=direction * 0.35 * sway)
+        motion.update(pivot=((left + right) / 2, top), angle=direction * 0.5 * sway)
     elif name in {"back_hair", "front_hair", "accessory"}:
-        motion.update(pivot=((left + right) / 2, top), angle=-0.22 * sway)
+        motion.update(pivot=((left + right) / 2, top), angle=-0.4 * sway)
     elif name in {"left_eye_white", "right_eye_white", "left_lashes", "right_lashes"}:
         motion.update(sy=max(0.1, 1.0 - 0.9 * blink))
     elif name in {"left_iris", "right_iris"}:
@@ -176,6 +181,23 @@ def render_preview(
     )
     prepared = _prepare_layers(source_size, sprites, crop_box, scale)
     surface_size = next(iter(prepared.values()))[1].size
+    neck_box = prepared["neck"][2]
+    head_pivot = ((neck_box[0] + neck_box[2]) / 2, neck_box[3])
+    head_parts = {
+        "back_hair",
+        "neck",
+        "face",
+        "left_eye_white",
+        "right_eye_white",
+        "left_iris",
+        "right_iris",
+        "left_lashes",
+        "right_lashes",
+        "mouth_inside",
+        "mouth",
+        "front_hair",
+        "accessory",
+    }
     background = _background(canvas_size)
     frames: list[Image.Image] = []
     for index in range(frame_count):
@@ -186,8 +208,12 @@ def render_preview(
             _pulse(index, round(frame_count * 0.22), 3),
             _pulse(index, round(frame_count * 0.78), 3),
         )
-        mouth = 0.55 * _pulse(index, round(frame_count * 0.47), 7)
-        gaze = math.sin(phase * 0.5) * 0.7
+        mouth = 0.65 * max(
+            _pulse(index, round(frame_count * 0.39), 6),
+            _pulse(index, round(frame_count * 0.56), 5),
+        )
+        gaze = math.sin(phase) * 0.9
+        gesture = _pulse(index, round(frame_count * 0.62), 11)
         character = Image.new("RGBA", surface_size)
         for sprite in sorted(sprites, key=lambda item: item.depth):
             _, layer, box = prepared[sprite.name]
@@ -199,9 +225,19 @@ def render_preview(
                 blink=blink,
                 mouth=mouth,
                 gaze=gaze,
+                gesture=gesture,
             )
             if visible:
-                character.alpha_composite(_transform(layer, **motion))
+                animated_layer = _transform(layer, **motion)
+                if sprite.name in head_parts:
+                    animated_layer = _transform(
+                        animated_layer,
+                        pivot=head_pivot,
+                        angle=0.65 * sway,
+                        dx=0.7 * sway,
+                        dy=-1.4 * breath,
+                    )
+                character.alpha_composite(animated_layer)
         frame = background.copy()
         x = (canvas_size[0] - character.width) // 2
         y = canvas_size[1] - character.height - 42
