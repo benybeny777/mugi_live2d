@@ -51,6 +51,7 @@ README用GIFとは別に、VRM本体のExpressionとボーンをthree-vrmで直�
 | Phase 3 | Phase 2と顔格子・自然なまばたき・5母音・感情デモ版を全画面で順番比較 | [MP4](media/vrm-phase3-face-expressions.mp4) |
 | Phase 4 | Phase 3と髪・星アクセサリーのSpring Bone版を全画面で順番比較 | [MP4](media/vrm-phase4-spring-bone.mp4) |
 | Phase 5 | Phase 4とidle・greet・talkタイムライン版を全画面で順番比較 | [MP4](media/vrm-phase5-motion-timeline.mp4) |
+| Phase 6 | Phase 1基準映像と全品質改善後のリリース版を全画面で順番比較 | [MP4](media/vrm-phase6-release-quality.mp4) |
 
 ## 生成と検証
 
@@ -59,6 +60,7 @@ README用GIFとは別に、VRM本体のExpressionとボーンをthree-vrmで直�
 ```powershell
 uv run python -m scripts.build_vrm
 uv run python -m scripts.validate_vrm exports/vrm/mugi.vrm
+uv run python -m scripts.validate_vrm_release
 uv run python -m scripts.render_vrm_preview
 ```
 
@@ -72,6 +74,10 @@ uv run python -m scripts.export_vrm_layers
 検証スクリプトは GLB 構造、VRM 1.0 メタデータ、必須 Humanoid ボーン、ボーン階層、埋め込み画像、
 18カードメッシュ、459頂点、スキン、顔格子8枚、標準17種・カスタム3種の Expression、
 Spring Bone 3チェーンと各モーフの結線を確認します。
+
+リリース検証は上記に加えて、18メッシュ・459頂点・顔格子8枚・Expression 20種・
+Spring Bone 3チェーン/5可動ジョイント、10 MiB以下の容量、Phase 1〜6のREADMEリンク、
+GIF解像度、MP4コンテナ、idle/greet/talkタイムラインを一括確認します。
 
 プレビュー生成は VRM 本体が有効なGLBであることを確認し、モデル生成と同じ決定的なPSDレイヤー抽出を
 使って README 用の `docs/media/mugi-vrm-preview.gif` を作ります。

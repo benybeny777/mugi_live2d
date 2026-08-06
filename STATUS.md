@@ -4,6 +4,9 @@
 
 ## 2026-08-06 VRM Aプラン
 
+- Phase 6: VRM構造・容量・顔格子・Expression・Spring Bone・タイムライン・Phase動画を一括検査。
+- Phase 1基準→Phase 6リリースの全画面順番再生GIF/MP4と品質レポートをREADMEへ追加。
+- リリースゲートは18メッシュ、459頂点、Expression 20種、Spring Bone 3チェーン/5可動で合格。
 - Phase 5: 外部JSONタイムラインでidle→greet→talkを循環し、頭・胸・左右腕を滑らかに補間。
 - 足元固定を維持し、表情・5母音・Spring Boneを動作状態ごとに組み合わせる実機デモへ更新。
 - Phase 4→5の全画面順番再生GIF/MP4をREADMEのVRMプレビュー内へ追加。

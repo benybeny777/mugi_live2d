@@ -34,6 +34,12 @@ VRMプレビューの改善履歴です。前フェーズ、現フェーズの�
 
 [![Phase 4からPhase 5を順番再生](docs/media/vrm-phase5-motion-timeline.gif)](docs/media/vrm-phase5-motion-timeline.mp4)
 
+#### Phase 6：リリース品質
+
+[![Phase 1からPhase 6を順番再生](docs/media/vrm-phase6-release-quality.gif)](docs/media/vrm-phase6-release-quality.mp4)
+
+最終構造と動画リンクの検査結果は[VRM品質レポート](docs/VRM_QUALITY_REPORT.md)にまとめています。
+
 ## Live2D 動作プレビュー
 
 [![むぎのLive2D動作プレビュー](docs/media/mugi-cubism-preview.gif)](docs/media/mugi-cubism-preview.mp4)
