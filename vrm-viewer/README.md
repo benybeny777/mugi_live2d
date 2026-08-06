@@ -26,6 +26,7 @@ uv run python viewer/server.py
 - 自動呼吸、視線、左右差のある自然なまばたき
 - 5母音の自動口パクと感情デモ、手動の感情切替
 - 後髪・前髪・星アクセサリーのSpring Boneをthree-vrmで直接計算
+- `motions/mugi-timeline.json`のidle・greet・talkを滑らかに循環
 - Canvasから5秒WebMを直接録画
 
 動画はブラウザ内で生成され、外部へ送信されません。

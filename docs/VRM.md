@@ -28,6 +28,10 @@ Live2D 版は変更しません。
   ビューア側から値を渡します。
 - 後髪・前髪・星アクセサリーはExpressionによる反復揺れをやめ、対応ランタイムが
   `VRMC_springBone`を計算したときだけ頭の動きへ遅れて追従します。
+- 実機プレビューは`vrm-viewer/motions/mugi-timeline.json`を読み、idle → greet → talkを
+  滑らかなキーフレーム補間で循環します。足・腰の位置は変えず、頭・胸・腕だけを動かします。
+- Aプランは正面カードのためVRMAは同梱しません。フル3Dモデルへ移行するときに、同じ3状態を
+  `VRMC_vrm_animation`へ置き換える方針です。
 - README の GIF は足元を固定し、呼吸、手足と髪の微動、視線、左右差のある blink、
   5母音と感情の組み合わせを穏やかに再生します。
 - GIF のタイムライン自体は VRM に埋め込んでいません。VRM 1.0 の実際の動きは利用側が制御します。
@@ -46,6 +50,7 @@ README用GIFとは別に、VRM本体のExpressionとボーンをthree-vrmで直�
 | Phase 2 | 4頂点カードと多分割・段階ウェイト版を全画面で順番比較 | [MP4](media/vrm-phase2-deformable-mesh.mp4) |
 | Phase 3 | Phase 2と顔格子・自然なまばたき・5母音・感情デモ版を全画面で順番比較 | [MP4](media/vrm-phase3-face-expressions.mp4) |
 | Phase 4 | Phase 3と髪・星アクセサリーのSpring Bone版を全画面で順番比較 | [MP4](media/vrm-phase4-spring-bone.mp4) |
+| Phase 5 | Phase 4とidle・greet・talkタイムライン版を全画面で順番比較 | [MP4](media/vrm-phase5-motion-timeline.mp4) |
 
 ## 生成と検証
 
