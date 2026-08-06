@@ -28,9 +28,10 @@ def test_generated_vrm_passes_structural_validation(tmp_path: Path) -> None:
 
     assert result["layers"] == 18
     assert result["meshes"] == 18
-    assert result["vertices"] == 365
-    assert result["deformableMeshes"] == 8
+    assert result["vertices"] == 459
+    assert result["deformableMeshes"] == 16
     assert result["gradientWeightedMeshes"] == 5
+    assert result["facialGridMeshes"] == 8
     assert validator.validate(output) == []
     document, _ = validator.read_glb(output)
     vrm = document["extensions"]["VRMC_vrm"]
@@ -57,6 +58,9 @@ def test_generated_vrm_passes_structural_validation(tmp_path: Path) -> None:
     assert mesh_by_name["torsoMesh"]["extras"]["grid"] == [4, 8]
     assert mesh_by_name["screen_left_armMesh"]["extras"]["gradientWeights"] is True
     assert mesh_by_name["faceMesh"]["extras"]["grid"] == [1, 1]
+    assert mesh_by_name["left_eye_whiteMesh"]["extras"]["grid"] == [4, 2]
+    assert mesh_by_name["mouthMesh"]["extras"]["grid"] == [5, 2]
+    assert mesh_by_name["mouth_insideMesh"]["extras"]["grid"] == [5, 2]
 
 
 def test_validator_rejects_non_glb(tmp_path: Path) -> None:

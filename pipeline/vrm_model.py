@@ -21,7 +21,7 @@ LICENSE_URL = (
 )
 VRM_META: dict[str, Any] = {
     "name": "むぎ 多層ペラ板 VRM",
-    "version": "2.0.0",
+    "version": "3.0.0",
     "authors": ["benybeny777"],
     "copyrightInformation": "Copyright (c) benybeny777. All rights reserved.",
     "references": ["work/psd/hiyori/mugi-hiyori-compatible-final.psd"],
@@ -144,6 +144,17 @@ def _quad(sprite: LayerSprite, canvas_size: tuple[int, int]) -> list[tuple[float
 
 
 def _grid_size(sprite_name: str) -> tuple[int, int]:
+    if sprite_name in {
+        "left_eye_white",
+        "right_eye_white",
+        "left_iris",
+        "right_iris",
+        "left_lashes",
+        "right_lashes",
+    }:
+        return (4, 2)
+    if sprite_name in {"mouth", "mouth_inside"}:
+        return (5, 2)
     if sprite_name == "torso":
         return (4, 8)
     if "arm" in sprite_name:
@@ -285,9 +296,12 @@ def _target_vertices(
         sum(point[1] for point in base) / len(base),
     )
     if target == "blink":
-        return [_scale(point, center, 1.0, 0.10) for point in base]
+        bottom = min(point[1] for point in base)
+        top = max(point[1] for point in base)
+        close_line = bottom + (top - bottom) * 0.38
+        return [(x, close_line + (y - center[1]) * 0.05, z) for x, y, z in base]
     if target == "wide":
-        return [_scale(point, center, 1.03, 1.16) for point in base]
+        return [_scale(point, center, 1.02, 1.09) for point in base]
     if target.startswith("look"):
         movement = {
             "lookLeft": (0.011, 0.0),
@@ -304,28 +318,50 @@ def _target_vertices(
             "ee": (1.45, 0.82),
             "oh": (0.82, 1.95),
         }
+        columns, rows = _grid_size(sprite.name)
+        width_scale, height_scale = scales[target]
+        source_height = max(point[1] for point in base) - min(point[1] for point in base)
         if sprite.name == "mouth_inside":
-            left = min(point[0] for point in base)
-            right = max(point[0] for point in base)
-            original_height = 1.8 * (sprite.canvas_box[3] - sprite.canvas_box[1]) / 4175
-            width_scale, height_scale = scales[target]
-            half_height = original_height * height_scale / 2
-            scaled_left = center[0] + (left - center[0]) * width_scale
-            scaled_right = center[0] + (right - center[0]) * width_scale
-            return [
-                (scaled_left, center[1] - half_height, base[0][2]),
-                (scaled_right, center[1] - half_height, base[1][2]),
-                (scaled_left, center[1] + half_height, base[2][2]),
-                (scaled_right, center[1] + half_height, base[3][2]),
-            ]
-        return [_scale(point, center, *scales[target]) for point in base]
+            source_height = 1.8 * (sprite.canvas_box[3] - sprite.canvas_box[1]) / 4175
+        source_height = max(source_height, 1e-5)
+        shaped: list[tuple[float, float, float]] = []
+        for index, (x, _, z) in enumerate(base):
+            row = index // (columns + 1)
+            column = index % (columns + 1)
+            horizontal = column / columns * 2.0 - 1.0
+            vertical = row / rows * 2.0 - 1.0
+            arch = (1.0 - horizontal * horizontal) * source_height
+            if target in {"ih", "ee"}:
+                curve = 0.06 * arch
+            elif target == "ou":
+                curve = -0.04 * arch * vertical
+            else:
+                curve = 0.10 * arch * vertical
+            shaped.append(
+                (
+                    center[0] + (x - center[0]) * width_scale,
+                    center[1] + vertical * source_height * height_scale / 2.0 + curve,
+                    z,
+                )
+            )
+        return shaped
     if target == "happy":
-        return [(x, y + 0.003, z) for x, y, z in base]
+        left = min(point[0] for point in base)
+        right = max(point[0] for point in base)
+        half_width = max((right - left) / 2.0, 1e-6)
+        return [
+            (x, y + 0.008 * abs((x - center[0]) / half_width), z) for x, y, z in base
+        ]
     if target == "sad":
         if "lashes" in sprite.name:
             direction = -3.0 if sprite.name.startswith("left") else 3.0
             return [_rotate(point, center, direction) for point in base]
-        return [(x, y - 0.003, z) for x, y, z in base]
+        left = min(point[0] for point in base)
+        right = max(point[0] for point in base)
+        half_width = max((right - left) / 2.0, 1e-6)
+        return [
+            (x, y - 0.006 * abs((x - center[0]) / half_width), z) for x, y, z in base
+        ]
     if target == "angry":
         direction = 4.0 if sprite.name.startswith("left") else -4.0
         return [_rotate(point, center, direction) for point in base]
@@ -721,6 +757,21 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
         "deformableMeshes": sum(mesh["extras"]["grid"] != [1, 1] for mesh in meshes),
         "gradientWeightedMeshes": sum(
             mesh["extras"]["gradientWeights"] for mesh in meshes
+        ),
+        "facialGridMeshes": sum(
+            mesh["name"]
+            in {
+                "left_eye_whiteMesh",
+                "right_eye_whiteMesh",
+                "left_irisMesh",
+                "right_irisMesh",
+                "left_lashesMesh",
+                "right_lashesMesh",
+                "mouthMesh",
+                "mouth_insideMesh",
+            }
+            and mesh["extras"]["grid"] != [1, 1]
+            for mesh in meshes
         ),
         "expressions": {"preset": len(preset), "custom": len(custom)},
     }

@@ -28,7 +28,9 @@ scene.add(new THREE.HemisphereLight(0xffffff, 0x334155, 2.2));
 const clock = new THREE.Clock();
 const licenseUrl = "https://github.com/benybeny777/mugi_live2d/blob/main/docs/VRM.md#%E5%88%A9%E7%94%A8%E6%9D%A1%E4%BB%B6";
 let vrm = null;
-let blinkUntil = 0;
+let blinkStartedAt = Number.NEGATIVE_INFINITY;
+let nextBlinkAt = 1400;
+const blinkDuration = 190;
 let elapsed = 0;
 const boneRest = new Map();
 
@@ -79,6 +81,17 @@ function clearGroup(names) {
   names.forEach((name) => setExpression(name, 0));
 }
 
+function startBlink(now) {
+  blinkStartedAt = now;
+  nextBlinkAt = now + 2600 + 550 * (0.5 + 0.5 * Math.sin(elapsed * 1.37));
+}
+
+function blinkCurve(now, delay = 0) {
+  const progress = (now - blinkStartedAt - delay) / blinkDuration;
+  if (progress <= 0 || progress >= 1) return 0;
+  return Math.sin(Math.PI * progress) ** 1.45;
+}
+
 function updateControls() {
   document.querySelector("#mouth-value").value = Number(mouth.value).toFixed(2);
   document.querySelector("#look-x-value").value = Number(lookX.value).toFixed(2);
@@ -88,18 +101,27 @@ function updateControls() {
 function applyExpressions(now) {
   if (!vrm) return;
   clearGroup(["happy", "angry", "sad", "relaxed", "surprised"]);
-  if (emotion.value) setExpression(emotion.value, 1);
+  const emotionDemo = ["relaxed", "happy", "", "surprised", "happy"];
+  const activeEmotion = emotion.value || (autoMotion.checked
+    ? emotionDemo[Math.floor(elapsed / 1.1) % emotionDemo.length]
+    : "");
+  if (activeEmotion) setExpression(activeEmotion, activeEmotion === "surprised" ? 0.72 : 0.82);
 
   let mouthValue = Number(mouth.value);
   let horizontal = Number(lookX.value);
   let vertical = Number(lookY.value);
+  let activeVowel = "aa";
   if (autoMotion.checked) {
-    mouthValue = Math.max(mouthValue, Math.max(0, Math.sin(elapsed * 4.2)) * 0.42);
+    const vowels = ["aa", "ih", "ou", "ee", "oh"];
+    activeVowel = vowels[Math.floor(elapsed / 0.52) % vowels.length];
+    mouthValue = Math.max(mouthValue, Math.max(0, Math.sin(elapsed * 6.05)) * 0.48);
     horizontal = Math.sin(elapsed * 0.55) * 0.7;
     vertical = Math.sin(elapsed * 0.31) * 0.25;
   }
-  setExpression("aa", mouthValue);
-  setExpression("blink", now < blinkUntil ? 1 : 0);
+  clearGroup(["aa", "ih", "ou", "ee", "oh", "blink"]);
+  setExpression(activeVowel, mouthValue);
+  setExpression("blinkLeft", blinkCurve(now));
+  setExpression("blinkRight", blinkCurve(now, 18));
   setExpression("lookLeft", Math.max(0, horizontal));
   setExpression("lookRight", Math.max(0, -horizontal));
   setExpression("lookUp", Math.max(0, vertical));
@@ -109,7 +131,7 @@ function applyExpressions(now) {
   setExpression("idleLeft", autoMotion.checked ? Math.max(0, idle) : 0);
   setExpression("idleRight", autoMotion.checked ? Math.max(0, -idle) : 0);
   setExpression("breath", autoMotion.checked ? 0.5 - 0.5 * Math.cos(elapsed * 1.25) : 0);
-  if (autoMotion.checked && Math.sin(elapsed * 1.7) > 0.992) blinkUntil = now + 115;
+  if (autoMotion.checked && now >= nextBlinkAt) startBlink(now);
 }
 
 function applyBoneMotion() {
@@ -156,7 +178,7 @@ function animate(now) {
 }
 
 [mouth, lookX, lookY].forEach((control) => control.addEventListener("input", updateControls));
-blinkButton.addEventListener("click", () => { blinkUntil = performance.now() + 140; });
+blinkButton.addEventListener("click", () => { startBlink(performance.now()); });
 recordButton.addEventListener("click", () => {
   const stream = canvas.captureStream(30);
   const recorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9" });

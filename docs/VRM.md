@@ -11,7 +11,7 @@ Live2D 版は変更しません。
 - 表示: 両面・Unlit・アルファ透過
 - 身長: 1.8 m 相当
 - リグ: VRM 1.0 の必須 Humanoid ボーンと chest / neck を階層で収録
-- メッシュ: 18枚・合計365頂点。胴体、腕、脚、髪、装飾は格子分割
+- メッシュ: 18枚・合計459頂点。胴体、腕、脚、髪、装飾に加えて目・まつ毛・口も格子分割
 - 表情: blink / blinkLeft / blinkRight、視線4方向、5母音、happy / angry / sad / relaxed / surprised
 - アイドル補助: `breath` / `idleLeft` / `idleRight` カスタム Expression
 - スキン: 胴体はspine→chest、手足はupper→lowerへ段階ウェイト。顔パーツはheadへ固定
@@ -25,7 +25,8 @@ Live2D 版は変更しません。
 - 対応ビューアが標準 Expression を操作すると、視線、まばたき、5母音の口パク、5感情が動きます。
 - `breath` / `idleLeft` / `idleRight` はカスタム Expression です。自動再生されるとは限らず、
   ビューア側から値を渡します。
-- README の GIF は足元を固定し、呼吸、手足と髪の微動、視線、両目の blink、`aa` を穏やかに再生します。
+- README の GIF は足元を固定し、呼吸、手足と髪の微動、視線、左右差のある blink、
+  5母音と感情の組み合わせを穏やかに再生します。
 - GIF のタイムライン自体は VRM に埋め込んでいません。VRM 1.0 の実際の動きは利用側が制御します。
 - 一枚絵由来のため、顔の動きは描き替えではなく各カードの変形です。
 
@@ -40,6 +41,7 @@ README用GIFとは別に、VRM本体のExpressionとボーンをthree-vrmで直�
 |---|---|---|
 | Phase 1 | three-vrmで実際のVRM本体を読み込んだ基準映像 | [MP4](media/vrm-phase1-runtime.mp4) |
 | Phase 2 | 4頂点カードと多分割・段階ウェイト版の左右比較 | [MP4](media/vrm-phase2-deformable-mesh.mp4) |
+| Phase 3 | Phase 2と顔格子・自然なまばたき・5母音・感情デモ版の左右比較 | [MP4](media/vrm-phase3-face-expressions.mp4) |
 
 ## 生成と検証
 
@@ -59,7 +61,8 @@ uv run python -m scripts.export_vrm_layers
 
 生成スクリプトは完成PSDから `exports/vrm/mugi.vrm` を再作成します。VRM は Git LFS で管理します。
 検証スクリプトは GLB 構造、VRM 1.0 メタデータ、必須 Humanoid ボーン、ボーン階層、埋め込み画像、
-18カードメッシュ、スキン、標準17種・カスタム3種の Expression と各モーフの結線を確認します。
+18カードメッシュ、459頂点、スキン、顔格子8枚、標準17種・カスタム3種の Expression と
+各モーフの結線を確認します。
 
 プレビュー生成は VRM 本体が有効なGLBであることを確認し、モデル生成と同じ決定的なPSDレイヤー抽出を
 使って README 用の `docs/media/mugi-vrm-preview.gif` を作ります。
