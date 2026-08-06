@@ -24,7 +24,11 @@ uv run python viewer/server.py
 
 - 実際のVRM Expressionを操作
 - 自動呼吸、視線、左右差のある自然なまばたき
-- 5母音の自動口パクと感情デモ、手動の感情切替
+- 5母音の滑らかな自動口パクと感情デモ、手動の感情切替
+- ローカル音声ファイルの周波数帯から母音を推定する口パク
+- 独立した眉・まぶた・笑い線による表情と `sleepy`
+- 上腕・前腕・手の3分割による肩・肘・手首の連鎖変形
+- 髪・顔・アクセサリーの微小な奥行き視差
 - 後髪・前髪・星アクセサリーのSpring Boneをthree-vrmで直接計算
 - `motions/mugi-timeline.json`のidle・greet・talkを滑らかに循環
 - Canvasから5秒WebMを直接録画

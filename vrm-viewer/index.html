@@ -38,7 +38,12 @@
             <option value="sad">sad</option>
             <option value="relaxed">relaxed</option>
             <option value="surprised">surprised</option>
+            <option value="sleepy">sleepy</option>
           </select>
+        </label>
+        <label>音声ファイルで口パク
+          <input id="audio-file" type="file" accept="audio/*" />
+          <output id="audio-status">未選択</output>
         </label>
         <label>口の開き <output id="mouth-value">0.00</output>
           <input id="mouth" type="range" min="0" max="1" value="0" step="0.01" />
@@ -54,7 +59,7 @@
           <button id="blink" type="button">まばたき</button>
           <button id="record" type="button">5秒録画</button>
         </div>
-        <p class="note">録画はブラウザ内だけで処理し、WebMとして保存します。外部送信はありません。</p>
+        <p class="note">音声解析と録画はブラウザ内だけで処理します。外部送信はありません。</p>
       </aside>
     </main>
     <script type="module" src="./viewer.js"></script>

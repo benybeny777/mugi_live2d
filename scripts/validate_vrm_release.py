@@ -9,14 +9,6 @@ from typing import Any
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
-PHASE_SLUGS = (
-    "vrm-phase1-runtime",
-    "vrm-phase2-deformable-mesh",
-    "vrm-phase3-face-expressions",
-    "vrm-phase4-spring-bone",
-    "vrm-phase5-motion-timeline",
-    "vrm-phase6-release-quality",
-)
 
 
 def _load_validator():
@@ -46,6 +38,7 @@ def validate_release(root: Path = ROOT) -> tuple[list[str], dict[str, Any]]:
     facial_grids = sum(
         mesh.get("extras", {}).get("grid") in ([4, 2], [5, 2]) for mesh in meshes
     )
+    mesh_names = {mesh.get("name") for mesh in meshes}
     vrm = document["extensions"]["VRMC_vrm"]
     spring_bone = document["extensions"].get("VRMC_springBone", {})
     springs = spring_bone.get("springs", [])
@@ -59,17 +52,33 @@ def validate_release(root: Path = ROOT) -> tuple[list[str], dict[str, Any]]:
         "customExpressions": len(vrm.get("expressions", {}).get("custom", {})),
         "springChains": len(springs),
         "springJoints": spring_joints,
-        "phaseVideos": len(PHASE_SLUGS),
+        "latestPreviews": 2,
+        "armSegments": sum(
+            name in mesh_names
+            for name in {
+                "screen_left_upper_armMesh",
+                "screen_left_forearmMesh",
+                "screen_left_handMesh",
+                "screen_right_upper_armMesh",
+                "screen_right_forearmMesh",
+                "screen_right_handMesh",
+            }
+        ),
+        "browMeshes": sum(
+            name in mesh_names for name in {"left_browMesh", "right_browMesh"}
+        ),
     }
     expected = {
-        "meshes": 18,
-        "vertices": 459,
-        "facialGridMeshes": 8,
+        "meshes": 26,
+        "vertices": 543,
+        "facialGridMeshes": 12,
         "presetExpressions": 17,
-        "customExpressions": 4,
+        "customExpressions": 5,
         "springChains": 3,
         "springJoints": 5,
-        "phaseVideos": 6,
+        "latestPreviews": 2,
+        "armSegments": 6,
+        "browMeshes": 2,
     }
     for name, value in expected.items():
         if metrics[name] != value:
@@ -84,21 +93,18 @@ def validate_release(root: Path = ROOT) -> tuple[list[str], dict[str, Any]]:
             errors.append(f"missing main VRM preview: {path.relative_to(root)}")
         if f"docs/media/{name}" not in readme:
             errors.append(f"README does not link main VRM preview: {name}")
-    for index, slug in enumerate(PHASE_SLUGS, start=1):
-        gif_path = root / "docs" / "media" / f"{slug}.gif"
-        mp4_path = root / "docs" / "media" / f"{slug}.mp4"
-        for path in (gif_path, mp4_path):
-            if not path.is_file() or path.stat().st_size == 0:
-                errors.append(f"missing phase media: {path.relative_to(root)}")
-        if f"docs/media/{slug}.gif" not in readme or f"docs/media/{slug}.mp4" not in readme:
-            errors.append(f"README does not link both media files for Phase {index}")
-        if gif_path.is_file():
-            with Image.open(gif_path) as gif:
-                minimum = (500, 390) if index == 1 else (940, 720)
-                if gif.width < minimum[0] or gif.height < minimum[1]:
-                    errors.append(f"Phase {index} GIF is smaller than {minimum[0]}x{minimum[1]}")
-        if mp4_path.is_file() and mp4_path.read_bytes()[4:8] != b"ftyp":
-            errors.append(f"Phase {index} MP4 has no ISO BMFF ftyp box")
+    gif_path = root / "docs" / "media" / "mugi-vrm-preview.gif"
+    if gif_path.is_file():
+        with Image.open(gif_path) as gif:
+            if (gif.width, gif.height) != (940, 720):
+                errors.append("main VRM GIF must be 940x720")
+    mp4_path = root / "docs" / "media" / "mugi-vrm-preview.mp4"
+    if mp4_path.is_file() and mp4_path.read_bytes()[4:8] != b"ftyp":
+        errors.append("main VRM MP4 has no ISO BMFF ftyp box")
+    if "vrm-phase" in readme:
+        errors.append("README must show only the latest VRM preview")
+    if list((root / "docs" / "media").glob("vrm-phase*")):
+        errors.append("obsolete VRM phase preview files must be removed")
 
     timeline = json.loads(
         (root / "vrm-viewer" / "motions" / "mugi-timeline.json").read_text(
