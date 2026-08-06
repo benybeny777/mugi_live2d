@@ -26,10 +26,10 @@ def test_generated_vrm_passes_structural_validation(tmp_path: Path) -> None:
         256,
     )
 
-    assert result["layers"] == 26
-    assert result["meshes"] == 26
-    assert result["vertices"] == 543
-    assert result["deformableMeshes"] == 24
+    assert result["layers"] == 18
+    assert result["meshes"] == 18
+    assert result["vertices"] == 459
+    assert result["deformableMeshes"] == 16
     assert result["gradientWeightedMeshes"] == 5
     assert result["facialGridMeshes"] == 8
     assert result["springBones"] == 3
@@ -65,18 +65,15 @@ def test_generated_vrm_passes_structural_validation(tmp_path: Path) -> None:
         "idleLeft",
         "idleRight",
         "greet",
-        "sleepy",
     }
-    assert len(document["meshes"]) == 26
+    assert len(document["meshes"]) == 18
     animated_meshes = [
         mesh for mesh in document["meshes"] if mesh["primitives"][0].get("targets")
     ]
-    assert len(animated_meshes) == 21
+    assert len(animated_meshes) == 13
     mesh_by_name = {mesh["name"]: mesh for mesh in document["meshes"]}
     assert mesh_by_name["torsoMesh"]["extras"]["grid"] == [4, 8]
-    assert mesh_by_name["screen_left_upper_armMesh"]["extras"]["gradientWeights"] is False
-    assert mesh_by_name["left_browMesh"]["extras"]["grid"] == [4, 2]
-    assert mesh_by_name["left_smile_creaseMesh"]["extras"]["grid"] == [4, 2]
+    assert mesh_by_name["screen_left_armMesh"]["extras"]["gradientWeights"] is False
     assert mesh_by_name["faceMesh"]["extras"]["grid"] == [1, 1]
     assert mesh_by_name["left_eye_whiteMesh"]["extras"]["grid"] == [4, 2]
     assert mesh_by_name["mouthMesh"]["extras"]["grid"] == [5, 2]

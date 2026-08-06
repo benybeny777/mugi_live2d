@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 from pathlib import Path
 from typing import Any
@@ -9,16 +8,6 @@ from typing import Any
 from PIL import Image, ImageChops, ImageStat
 
 ROOT = Path(__file__).resolve().parents[1]
-
-
-def _load_vrm_validator():
-    path = ROOT / "scripts" / "validate_vrm.py"
-    spec = importlib.util.spec_from_file_location("validate_vrm_visual_model", path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("could not load validate_vrm.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def _foreground_bbox(frame: Image.Image) -> tuple[int, int, int, int] | None:
@@ -70,23 +59,6 @@ def validate_visual(root: Path = ROOT) -> tuple[list[str], dict[str, Any]]:
     elif max(bottom_centres) - min(bottom_centres) > 3.0:
         errors.append("character foot position drifts by more than 3 pixels")
 
-    validator = _load_vrm_validator()
-    document, _ = validator.read_glb(root / "exports" / "vrm" / "mugi.vrm")
-    mesh_names = {mesh.get("name") for mesh in document.get("meshes", [])}
-    arm_names = {
-        "screen_left_upper_armMesh",
-        "screen_left_forearmMesh",
-        "screen_left_handMesh",
-        "screen_right_upper_armMesh",
-        "screen_right_forearmMesh",
-        "screen_right_handMesh",
-    }
-    brow_names = {"left_browMesh", "right_browMesh"}
-    if not arm_names.issubset(mesh_names):
-        errors.append("VRM does not contain all six arm segment meshes")
-    if not brow_names.issubset(mesh_names):
-        errors.append("VRM does not contain both eyebrow meshes")
-
     metrics = {
         "size": list(size),
         "frames": frame_count,
@@ -94,8 +66,6 @@ def validate_visual(root: Path = ROOT) -> tuple[list[str], dict[str, Any]]:
         "footDriftPx": round(
             max(bottom_centres) - min(bottom_centres) if bottom_centres else 0.0, 3
         ),
-        "armSegments": len(arm_names & mesh_names),
-        "browMeshes": len(brow_names & mesh_names),
     }
     return errors, metrics
 

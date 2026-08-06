@@ -38,7 +38,6 @@ def validate_release(root: Path = ROOT) -> tuple[list[str], dict[str, Any]]:
     facial_grids = sum(
         mesh.get("extras", {}).get("grid") in ([4, 2], [5, 2]) for mesh in meshes
     )
-    mesh_names = {mesh.get("name") for mesh in meshes}
     vrm = document["extensions"]["VRMC_vrm"]
     spring_bone = document["extensions"].get("VRMC_springBone", {})
     springs = spring_bone.get("springs", [])
@@ -53,32 +52,16 @@ def validate_release(root: Path = ROOT) -> tuple[list[str], dict[str, Any]]:
         "springChains": len(springs),
         "springJoints": spring_joints,
         "latestPreviews": 2,
-        "armSegments": sum(
-            name in mesh_names
-            for name in {
-                "screen_left_upper_armMesh",
-                "screen_left_forearmMesh",
-                "screen_left_handMesh",
-                "screen_right_upper_armMesh",
-                "screen_right_forearmMesh",
-                "screen_right_handMesh",
-            }
-        ),
-        "browMeshes": sum(
-            name in mesh_names for name in {"left_browMesh", "right_browMesh"}
-        ),
     }
     expected = {
-        "meshes": 26,
-        "vertices": 543,
-        "facialGridMeshes": 12,
+        "meshes": 18,
+        "vertices": 459,
+        "facialGridMeshes": 8,
         "presetExpressions": 17,
-        "customExpressions": 5,
+        "customExpressions": 4,
         "springChains": 3,
         "springJoints": 5,
         "latestPreviews": 2,
-        "armSegments": 6,
-        "browMeshes": 2,
     }
     for name, value in expected.items():
         if metrics[name] != value:

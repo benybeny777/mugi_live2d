@@ -25,5 +25,3 @@ def test_latest_vrm_preview_visual_gate() -> None:
     assert metrics["frames"] >= 80
     assert metrics["maxMotionScore"] >= 0.15
     assert metrics["footDriftPx"] <= 3.0
-    assert metrics["armSegments"] == 6
-    assert metrics["browMeshes"] == 2

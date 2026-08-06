@@ -10,9 +10,6 @@ from psd_tools.api.layers import Layer
 CANVAS_CENTER_X = 1488
 LEG_SPLIT_TOP = 2230
 TORSO_SPLIT_BOTTOM = 2420
-ARM_ELBOW_RATIO = 0.44
-ARM_WRIST_RATIO = 0.82
-ARM_OVERLAP_PX = 24
 
 
 @dataclass(frozen=True)
@@ -81,34 +78,6 @@ def _sprite(
     return LayerSprite(name, bone, depth, image.crop(alpha_box), alpha_box, rest_visible)
 
 
-def _arm_parts(
-    image: Image.Image,
-    side: str,
-    bones: tuple[str, str, str],
-) -> list[LayerSprite]:
-    alpha_box = image.getchannel("A").getbbox()
-    if alpha_box is None:
-        raise ValueError(f"VRM {side} arm has no visible pixels")
-    _, top, _, bottom = alpha_box
-    height = bottom - top
-    elbow = round(top + height * ARM_ELBOW_RATIO)
-    wrist = round(top + height * ARM_WRIST_RATIO)
-    bands = (
-        ("upper_arm", bones[0], top, elbow + ARM_OVERLAP_PX, -0.0200),
-        ("forearm", bones[1], elbow - ARM_OVERLAP_PX, wrist + ARM_OVERLAP_PX, -0.0195),
-        ("hand", bones[2], wrist - ARM_OVERLAP_PX, bottom, -0.0190),
-    )
-    return [
-        _sprite(
-            f"screen_{side}_{part}",
-            bone,
-            depth,
-            _masked(image, (0, band_top, image.width, band_bottom)),
-        )
-        for part, bone, band_top, band_bottom, depth in bands
-    ]
-
-
 def extract_layer_sprites(psd_path: Path) -> tuple[tuple[int, int], list[LayerSprite]]:
     psd = PSDImage.open(psd_path)
     canvas_size = psd.size
@@ -132,16 +101,6 @@ def extract_layer_sprites(psd_path: Path) -> tuple[tuple[int, int], list[LayerSp
     )
     screen_left_arm = _composite_layers(canvas_size, layers, ["/身体/左腕"])
     screen_right_arm = _composite_layers(canvas_size, layers, ["/身体/右腕"])
-    screen_left_arm_parts = _arm_parts(
-        screen_left_arm,
-        "left",
-        ("rightUpperArm", "rightLowerArm", "rightHand"),
-    )
-    screen_right_arm_parts = _arm_parts(
-        screen_right_arm,
-        "right",
-        ("leftUpperArm", "leftLowerArm", "leftHand"),
-    )
     neck = _composite_layers(canvas_size, layers, ["/身体/首"])
     face = _composite_layers(
         canvas_size,
@@ -151,11 +110,11 @@ def extract_layer_sprites(psd_path: Path) -> tuple[tuple[int, int], list[LayerSp
             "/顔/右耳",
             "/顔/顔下地",
             "/顔/顔",
+            "/顔/左眉",
+            "/顔/右眉",
             "/顔/鼻",
         ],
     )
-    left_brow = _composite_layers(canvas_size, layers, ["/顔/左眉"])
-    right_brow = _composite_layers(canvas_size, layers, ["/顔/右眉"])
     left_eye_white = _composite_layers(canvas_size, layers, ["/顔/左白目"])
     right_eye_white = _composite_layers(canvas_size, layers, ["/顔/右白目"])
     left_iris = _composite_layers(canvas_size, layers, ["/顔/左瞳", "/顔/左ハイライト"])
@@ -165,12 +124,6 @@ def extract_layer_sprites(psd_path: Path) -> tuple[tuple[int, int], list[LayerSp
     )
     right_lashes = _composite_layers(
         canvas_size, layers, [f"/顔/右まつげ{index}" for index in range(1, 8)]
-    )
-    left_smile_crease = _composite_layers(
-        canvas_size, layers, ["/顔/左笑い目くぼみ"], ignore_opacity=True
-    )
-    right_smile_crease = _composite_layers(
-        canvas_size, layers, ["/顔/右笑い目くぼみ"], ignore_opacity=True
     )
     mouth = _composite_layers(canvas_size, layers, ["/顔/唇", "/顔/上口", "/顔/下口"])
     mouth_inside = _composite_layers(
@@ -192,8 +145,8 @@ def extract_layer_sprites(psd_path: Path) -> tuple[tuple[int, int], list[LayerSp
         _sprite("back_hair", "head", -0.040, back_hair),
         _sprite("screen_left_leg", "rightUpperLeg", -0.030, screen_left_leg),
         _sprite("screen_right_leg", "leftUpperLeg", -0.030, screen_right_leg),
-        *screen_left_arm_parts,
-        *screen_right_arm_parts,
+        _sprite("screen_left_arm", "rightUpperArm", -0.020, screen_left_arm),
+        _sprite("screen_right_arm", "leftUpperArm", -0.020, screen_right_arm),
         _sprite("torso", "spine", -0.010, torso),
         _sprite("neck", "head", 0.000, neck),
         _sprite("face", "head", 0.010, face),
@@ -203,14 +156,6 @@ def extract_layer_sprites(psd_path: Path) -> tuple[tuple[int, int], list[LayerSp
         _sprite("right_iris", "head", 0.021, right_iris),
         _sprite("left_lashes", "head", 0.022, left_lashes),
         _sprite("right_lashes", "head", 0.022, right_lashes),
-        _sprite("left_brow", "head", 0.023, left_brow),
-        _sprite("right_brow", "head", 0.023, right_brow),
-        _sprite(
-            "left_smile_crease", "head", 0.0235, left_smile_crease, rest_visible=False
-        ),
-        _sprite(
-            "right_smile_crease", "head", 0.0235, right_smile_crease, rest_visible=False
-        ),
         _sprite("mouth_inside", "head", 0.024, mouth_inside, rest_visible=False),
         _sprite("mouth", "head", 0.025, mouth),
         _sprite("front_hair", "head", 0.030, front_hair),
