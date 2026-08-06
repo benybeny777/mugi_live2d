@@ -4,6 +4,9 @@
 
 ## 2026-08-06 VRM Aプラン
 
+- VRMプレビューのぼやけを修正。4096テクスチャ、透過境界補正、Linear sampling、高密度録画を適用。
+- READMEのメインGIFを実ランタイム録画へ更新し、クリック先を高品質MP4へ変更。
+- 同一解像度の輪郭指標は435.55から1248.31へ改善。Live2D版は変更なし。
 - Phase 6: VRM構造・容量・顔格子・Expression・Spring Bone・タイムライン・Phase動画を一括検査。
 - Phase 1基準→Phase 6リリースの全画面順番再生GIF/MP4と品質レポートをREADMEへ追加。
 - リリースゲートは18メッシュ、459頂点、Expression 20種、Spring Bone 3チェーン/5可動で合格。

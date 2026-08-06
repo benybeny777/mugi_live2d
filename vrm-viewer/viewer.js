@@ -16,7 +16,8 @@ const blinkButton = document.querySelector("#blink");
 const recordButton = document.querySelector("#record");
 
 const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const defaultPixelRatio = Math.min(window.devicePixelRatio, 2);
+renderer.setPixelRatio(defaultPixelRatio);
 renderer.setClearColor(0x000000, 0);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
@@ -231,6 +232,9 @@ function animate(now) {
 [mouth, lookX, lookY].forEach((control) => control.addEventListener("input", updateControls));
 blinkButton.addEventListener("click", () => { startBlink(performance.now()); });
 recordButton.addEventListener("click", () => {
+  renderer.setPixelRatio(2);
+  renderer.setClearColor(0x111827, 1);
+  resize();
   const stream = canvas.captureStream(30);
   const recorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9" });
   const chunks = [];
@@ -241,6 +245,9 @@ recordButton.addEventListener("click", () => {
     link.download = "mugi-vrm-runtime-preview.webm";
     link.click();
     URL.revokeObjectURL(link.href);
+    renderer.setPixelRatio(defaultPixelRatio);
+    renderer.setClearColor(0x000000, 0);
+    resize();
     recordButton.disabled = false;
     recordButton.textContent = "5秒録画";
   });

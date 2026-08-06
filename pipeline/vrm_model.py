@@ -7,7 +7,7 @@ import struct
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
+from PIL import Image, ImageFilter
 
 from pipeline.vrm_layers import (
     LayerSprite,
@@ -21,7 +21,7 @@ LICENSE_URL = (
 )
 VRM_META: dict[str, Any] = {
     "name": "むぎ 多層ペラ板 VRM",
-    "version": "4.0.0",
+    "version": "5.0.0",
     "authors": ["benybeny777"],
     "copyrightInformation": "Copyright (c) benybeny777. All rights reserved.",
     "references": ["work/psd/hiyori/mugi-hiyori-compatible-final.psd"],
@@ -451,7 +451,24 @@ def _expression_bind(node: int, index: int, weight: float = 1.0) -> dict[str, An
     return {"node": node, "index": index, "weight": weight}
 
 
-def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048) -> dict[str, Any]:
+def _prepare_sprite_texture(image: Image.Image, scale: float) -> Image.Image:
+    """Resize transparent art without dark fringes, then restore line clarity."""
+    prepared = image.convert("RGBA")
+    if scale < 1.0:
+        size = (
+            max(1, round(prepared.width * scale)),
+            max(1, round(prepared.height * scale)),
+        )
+        prepared = prepared.convert("RGBa").resize(size, Image.Resampling.LANCZOS).convert("RGBA")
+
+    red, green, blue, alpha = prepared.split()
+    rgb = Image.merge("RGB", (red, green, blue)).filter(
+        ImageFilter.UnsharpMask(radius=0.6, percent=75, threshold=3)
+    )
+    return Image.merge("RGBA", (*rgb.split(), alpha))
+
+
+def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 4096) -> dict[str, Any]:
     canvas_size, sprites = extract_layer_sprites(psd_path)
     binary = BinaryBuilder()
     nodes: list[dict[str, Any]] = []
@@ -476,15 +493,7 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
 
     texture_scale = min(1.0, max_texture_size / max(canvas_size))
     for sprite in sprites:
-        resized = sprite.image
-        if texture_scale < 1.0:
-            resized = sprite.image.resize(
-                (
-                    max(1, round(sprite.image.width * texture_scale)),
-                    max(1, round(sprite.image.height * texture_scale)),
-                ),
-                Image.Resampling.LANCZOS,
-            )
+        resized = _prepare_sprite_texture(sprite.image, texture_scale)
         image_view = binary.add(_png_bytes(resized))
         image_index = len(images)
         images.append(
@@ -848,7 +857,7 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
         ],
         "materials": materials,
         "textures": textures,
-        "samplers": [{"magFilter": 9729, "minFilter": 9987, "wrapS": 33071, "wrapT": 33071}],
+        "samplers": [{"magFilter": 9729, "minFilter": 9729, "wrapS": 33071, "wrapT": 33071}],
         "images": images,
         "accessors": accessors,
         "bufferViews": binary.buffer_views,

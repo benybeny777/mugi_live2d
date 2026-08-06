@@ -16,6 +16,15 @@ def test_vrm_viewer_uses_local_pinned_runtime() -> None:
     )
 
 
+def test_recording_uses_high_density_opaque_background() -> None:
+    viewer = (ROOT / "vrm-viewer" / "viewer.js").read_text(encoding="utf-8")
+
+    assert "renderer.setPixelRatio(2)" in viewer
+    assert "renderer.setClearColor(0x111827, 1)" in viewer
+    assert "renderer.setPixelRatio(defaultPixelRatio)" in viewer
+    assert "renderer.setClearColor(0x000000, 0)" in viewer
+
+
 def test_motion_timeline_is_contiguous_and_loopable() -> None:
     timeline = json.loads(
         (ROOT / "vrm-viewer" / "motions" / "mugi-timeline.json").read_text(
