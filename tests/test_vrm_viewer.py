@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,3 +14,29 @@ def test_vrm_viewer_uses_local_pinned_runtime() -> None:
     assert "../exports/vrm/mugi.vrm" in (ROOT / "vrm-viewer" / "viewer.js").read_text(
         encoding="utf-8"
     )
+
+
+def test_motion_timeline_is_contiguous_and_loopable() -> None:
+    timeline = json.loads(
+        (ROOT / "vrm-viewer" / "motions" / "mugi-timeline.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert timeline["version"] == 1
+    assert [segment["name"] for segment in timeline["segments"]] == [
+        "idle",
+        "greet",
+        "talk",
+    ]
+    assert timeline["segments"][0]["start"] == 0.0
+    assert timeline["segments"][-1]["end"] == timeline["duration"]
+    assert all(
+        current["end"] == following["start"]
+        for current, following in zip(timeline["segments"], timeline["segments"][1:])
+    )
+    for keyframes in timeline["tracks"].values():
+        assert keyframes[0][0] == 0.0
+        assert keyframes[-1][0] == timeline["duration"]
+        assert keyframes[0][1] == keyframes[-1][1]
+        assert [frame[0] for frame in keyframes] == sorted(frame[0] for frame in keyframes)

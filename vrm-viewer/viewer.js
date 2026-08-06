@@ -6,6 +6,7 @@ const canvas = document.querySelector("#stage");
 const stage = document.querySelector(".stage-panel");
 const loading = document.querySelector("#loading");
 const status = document.querySelector("#status");
+const motionState = document.querySelector("#motion-state");
 const autoMotion = document.querySelector("#auto-motion");
 const emotion = document.querySelector("#emotion");
 const mouth = document.querySelector("#mouth");
@@ -32,7 +33,22 @@ let blinkStartedAt = Number.NEGATIVE_INFINITY;
 let nextBlinkAt = 1400;
 const blinkDuration = 190;
 let elapsed = 0;
+let motionTimeline = null;
 const boneRest = new Map();
+
+fetch("./motions/mugi-timeline.json")
+  .then((response) => {
+    if (!response.ok) throw new Error(`motion timeline HTTP ${response.status}`);
+    return response.json();
+  })
+  .then((timeline) => {
+    motionTimeline = timeline;
+    stage.dataset.motionTimeline = timeline.name;
+  })
+  .catch((error) => {
+    console.warn("Motion timeline fallback:", error);
+    motionState.textContent = "motion: fallback idle";
+  });
 
 const loader = new GLTFLoader();
 loader.register(
@@ -104,10 +120,8 @@ function updateControls() {
 function applyExpressions(now) {
   if (!vrm) return;
   clearGroup(["happy", "angry", "sad", "relaxed", "surprised"]);
-  const emotionDemo = ["relaxed", "happy", "", "surprised", "happy"];
-  const activeEmotion = emotion.value || (autoMotion.checked
-    ? emotionDemo[Math.floor(elapsed / 1.1) % emotionDemo.length]
-    : "");
+  const motion = currentMotion();
+  const activeEmotion = emotion.value || (autoMotion.checked ? motion.emotion : "");
   if (activeEmotion) setExpression(activeEmotion, activeEmotion === "surprised" ? 0.72 : 0.82);
 
   let mouthValue = Number(mouth.value);
@@ -117,7 +131,11 @@ function applyExpressions(now) {
   if (autoMotion.checked) {
     const vowels = ["aa", "ih", "ou", "ee", "oh"];
     activeVowel = vowels[Math.floor(elapsed / 0.52) % vowels.length];
-    mouthValue = Math.max(mouthValue, Math.max(0, Math.sin(elapsed * 6.05)) * 0.48);
+    const speechStrength = motion.name === "talk" ? 0.52 : motion.name === "greet" ? 0.18 : 0.05;
+    mouthValue = Math.max(
+      mouthValue,
+      Math.max(0, Math.sin(elapsed * 6.05)) * speechStrength,
+    );
     horizontal = Math.sin(elapsed * 0.55) * 0.7;
     vertical = Math.sin(elapsed * 0.31) * 0.25;
   }
@@ -137,16 +155,38 @@ function applyExpressions(now) {
   if (autoMotion.checked && now >= nextBlinkAt) startBlink(now);
 }
 
+function currentMotion() {
+  if (!motionTimeline) return { name: "idle", emotion: "relaxed" };
+  const time = elapsed % motionTimeline.duration;
+  return motionTimeline.segments.find((segment) => time >= segment.start && time < segment.end)
+    ?? motionTimeline.segments[0];
+}
+
+function sampleMotionTrack(name) {
+  const keyframes = motionTimeline?.tracks?.[name];
+  if (!keyframes?.length) return 0;
+  const time = elapsed % motionTimeline.duration;
+  for (let index = 0; index < keyframes.length - 1; index += 1) {
+    const [startTime, startValue] = keyframes[index];
+    const [endTime, endValue] = keyframes[index + 1];
+    if (time < startTime || time > endTime) continue;
+    const linear = (time - startTime) / Math.max(endTime - startTime, 1e-6);
+    const eased = linear * linear * (3 - 2 * linear);
+    return THREE.MathUtils.lerp(startValue, endValue, eased);
+  }
+  return keyframes[keyframes.length - 1][1];
+}
+
 function applyBoneMotion() {
   const sway = autoMotion.checked ? Math.sin(elapsed * 0.8) : 0;
   const delayed = autoMotion.checked ? Math.sin(elapsed * 0.8 - 0.45) : 0;
   const rotations = {
-    chest: 0.012 * sway,
-    head: 0.018 * delayed,
-    leftUpperArm: 0.028 * sway,
-    leftLowerArm: 0.035 * delayed,
-    rightUpperArm: -0.028 * sway,
-    rightLowerArm: -0.035 * delayed,
+    chest: 0.007 * sway,
+    head: 0.01 * delayed,
+    leftUpperArm: 0.012 * sway,
+    leftLowerArm: 0.014 * delayed,
+    rightUpperArm: -0.012 * sway,
+    rightLowerArm: -0.014 * delayed,
     leftUpperLeg: 0.007 * sway,
     leftLowerLeg: -0.009 * delayed,
     rightUpperLeg: -0.007 * sway,
@@ -154,8 +194,15 @@ function applyBoneMotion() {
   };
   boneRest.forEach(({ bone, quaternion }, name) => {
     bone.quaternion.copy(quaternion);
-    bone.rotateZ(rotations[name] ?? 0);
+    const timelineRotation = autoMotion.checked ? sampleMotionTrack(name) : 0;
+    bone.rotateZ((rotations[name] ?? 0) + timelineRotation);
   });
+  const motionName = autoMotion.checked ? currentMotion().name : "manual";
+  if (motionState.dataset.name !== motionName) {
+    motionState.dataset.name = motionName;
+    motionState.textContent = `motion: ${motionName}`;
+    stage.dataset.motion = motionName;
+  }
 }
 
 function resize() {

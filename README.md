@@ -30,6 +30,10 @@ VRMプレビューの改善履歴です。前フェーズ、現フェーズの�
 
 [![Phase 3からPhase 4を順番再生](docs/media/vrm-phase4-spring-bone.gif)](docs/media/vrm-phase4-spring-bone.mp4)
 
+#### Phase 5：自然動作タイムライン
+
+[![Phase 4からPhase 5を順番再生](docs/media/vrm-phase5-motion-timeline.gif)](docs/media/vrm-phase5-motion-timeline.mp4)
+
 ## Live2D 動作プレビュー
 
 [![むぎのLive2D動作プレビュー](docs/media/mugi-cubism-preview.gif)](docs/media/mugi-cubism-preview.mp4)

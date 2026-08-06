@@ -4,6 +4,9 @@
 
 ## 2026-08-06 VRM Aプラン
 
+- Phase 5: 外部JSONタイムラインでidle→greet→talkを循環し、頭・胸・左右腕を滑らかに補間。
+- 足元固定を維持し、表情・5母音・Spring Boneを動作状態ごとに組み合わせる実機デモへ更新。
+- Phase 4→5の全画面順番再生GIF/MP4をREADMEのVRMプレビュー内へ追加。
 - Phase 4: 後髪・前髪・星アクセサリーへVRMC_springBone 1.0の3チェーン・5可動ジョイントを追加。
 - 髪の反復Expression揺れをSpring Boneへ置換し、頭の動きへ慣性を伴って追従する構成にした。
 - three-vrm実機で5 spring jointsの初期化と描画を確認し、Phase 3→4全画面比較動画をREADMEへ追加。
