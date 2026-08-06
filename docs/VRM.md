@@ -11,10 +11,10 @@ Live2D 版は変更しません。
 - 表示: 両面・Unlit・アルファ透過
 - 身長: 1.8 m 相当
 - リグ: VRM 1.0 の必須 Humanoid ボーンと chest / neck を階層で収録
-- メッシュ: 後髪、左右の脚、左右の腕、胴体、首、顔、左右の白目・瞳・まつげ、口内、口、前髪、装飾の18枚
+- メッシュ: 18枚・合計365頂点。胴体、腕、脚、髪、装飾は格子分割
 - 表情: blink / blinkLeft / blinkRight、視線4方向、5母音、happy / angry / sad / relaxed / surprised
 - アイドル補助: `breath` / `idleLeft` / `idleRight` カスタム Expression
-- スキン: 各カードを対応する head / spine / upperArm / upperLeg ボーンへ固定
+- スキン: 胴体はspine→chest、手足はupper→lowerへ段階ウェイト。顔パーツはheadへ固定
 
 これは正面絵を 3D 空間に立て、カードごとのメッシュ変形で顔、呼吸、手足、髪の動きを表現する
 試作です。横・背面の立体形状と物理シミュレーションはありません。フル 3D VRM へ進む場合は
@@ -39,6 +39,7 @@ README用GIFとは別に、VRM本体のExpressionとボーンをthree-vrmで直�
 | フェーズ | 主な確認内容 | 動画 |
 |---|---|---|
 | Phase 1 | three-vrmで実際のVRM本体を読み込んだ基準映像 | [MP4](media/vrm-phase1-runtime.mp4) |
+| Phase 2 | 4頂点カードと多分割・段階ウェイト版の左右比較 | [MP4](media/vrm-phase2-deformable-mesh.mp4) |
 
 ## 生成と検証
 

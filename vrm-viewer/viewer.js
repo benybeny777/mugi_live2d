@@ -30,6 +30,7 @@ const licenseUrl = "https://github.com/benybeny777/mugi_live2d/blob/main/docs/VR
 let vrm = null;
 let blinkUntil = 0;
 let elapsed = 0;
+const boneRest = new Map();
 
 const loader = new GLTFLoader();
 loader.register(
@@ -42,6 +43,20 @@ loader.load(
   (gltf) => {
     vrm = gltf.userData.vrm;
     scene.add(vrm.scene);
+    [
+      "chest",
+      "leftUpperArm",
+      "leftLowerArm",
+      "rightUpperArm",
+      "rightLowerArm",
+      "leftUpperLeg",
+      "leftLowerLeg",
+      "rightUpperLeg",
+      "rightLowerLeg",
+    ].forEach((name) => {
+      const bone = vrm.humanoid?.getNormalizedBoneNode(name);
+      if (bone) boneRest.set(name, { bone, quaternion: bone.quaternion.clone() });
+    });
     loading.hidden = true;
     const expressionCount = Object.keys(vrm.expressionManager?.expressionMap ?? {}).length;
     status.textContent = `読込成功・${expressionCount} expressions・実VRM描画中`;
@@ -97,6 +112,26 @@ function applyExpressions(now) {
   if (autoMotion.checked && Math.sin(elapsed * 1.7) > 0.992) blinkUntil = now + 115;
 }
 
+function applyBoneMotion() {
+  const sway = autoMotion.checked ? Math.sin(elapsed * 0.8) : 0;
+  const delayed = autoMotion.checked ? Math.sin(elapsed * 0.8 - 0.45) : 0;
+  const rotations = {
+    chest: 0.012 * sway,
+    leftUpperArm: 0.028 * sway,
+    leftLowerArm: 0.035 * delayed,
+    rightUpperArm: -0.028 * sway,
+    rightLowerArm: -0.035 * delayed,
+    leftUpperLeg: 0.007 * sway,
+    leftLowerLeg: -0.009 * delayed,
+    rightUpperLeg: -0.007 * sway,
+    rightLowerLeg: 0.009 * delayed,
+  };
+  boneRest.forEach(({ bone, quaternion }, name) => {
+    bone.quaternion.copy(quaternion);
+    bone.rotateZ(rotations[name] ?? 0);
+  });
+}
+
 function resize() {
   const width = stage.clientWidth;
   const height = stage.clientHeight;
@@ -114,6 +149,7 @@ function animate(now) {
   elapsed += delta;
   resize();
   applyExpressions(now);
+  applyBoneMotion();
   vrm?.update(delta);
   renderer.render(scene, camera);
   requestAnimationFrame(animate);

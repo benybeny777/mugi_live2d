@@ -143,6 +143,90 @@ def _quad(sprite: LayerSprite, canvas_size: tuple[int, int]) -> list[tuple[float
     ]
 
 
+def _grid_size(sprite_name: str) -> tuple[int, int]:
+    if sprite_name == "torso":
+        return (4, 8)
+    if "arm" in sprite_name:
+        return (3, 8)
+    if "leg" in sprite_name:
+        return (3, 10)
+    if sprite_name in {"back_hair", "front_hair"}:
+        return (5, 8)
+    if sprite_name == "accessory":
+        return (2, 3)
+    return (1, 1)
+
+
+def _grid_geometry(
+    sprite: LayerSprite, canvas_size: tuple[int, int]
+) -> tuple[
+    list[tuple[float, float, float]],
+    list[tuple[float, float]],
+    list[int],
+    tuple[int, int],
+]:
+    corners = _quad(sprite, canvas_size)
+    columns, rows = _grid_size(sprite.name)
+    left = corners[0][0]
+    right = corners[1][0]
+    bottom = corners[0][1]
+    top = corners[2][1]
+    positions: list[tuple[float, float, float]] = []
+    uvs: list[tuple[float, float]] = []
+    for row in range(rows + 1):
+        vertical = row / rows
+        y = bottom + (top - bottom) * vertical
+        for column in range(columns + 1):
+            horizontal = column / columns
+            x = left + (right - left) * horizontal
+            positions.append((x, y, sprite.depth))
+            uvs.append((horizontal, 1.0 - vertical))
+    indices: list[int] = []
+    stride = columns + 1
+    for row in range(rows):
+        for column in range(columns):
+            lower_left = row * stride + column
+            lower_right = lower_left + 1
+            upper_left = lower_left + stride
+            upper_right = upper_left + 1
+            indices.extend(
+                [lower_left, lower_right, upper_right, lower_left, upper_right, upper_left]
+            )
+    return positions, uvs, indices, (columns, rows)
+
+
+def _skin_data(
+    sprite: LayerSprite,
+    grid: tuple[int, int],
+    joint_lookup: dict[str, int],
+) -> tuple[list[int], list[float], bool]:
+    columns, rows = grid
+    secondary_bone: str | None = None
+    if sprite.name == "torso":
+        secondary_bone = "chest"
+    elif "UpperArm" in sprite.bone:
+        secondary_bone = sprite.bone.replace("UpperArm", "LowerArm")
+    elif "UpperLeg" in sprite.bone:
+        secondary_bone = sprite.bone.replace("UpperLeg", "LowerLeg")
+    primary_joint = joint_lookup[sprite.bone]
+    secondary_joint = joint_lookup.get(secondary_bone, primary_joint)
+    joints: list[int] = []
+    weights: list[float] = []
+    for row in range(rows + 1):
+        vertical = row / rows
+        if sprite.name == "torso":
+            secondary_weight = max(0.0, (vertical - 0.25) / 0.75) * 0.65
+        elif secondary_bone is not None:
+            secondary_weight = max(0.0, 1.0 - vertical / 0.72) * 0.85
+        else:
+            secondary_weight = 0.0
+        for _ in range(columns + 1):
+            weighted_secondary_joint = secondary_joint if secondary_weight > 0.0 else 0
+            joints.extend([primary_joint, weighted_secondary_joint, 0, 0])
+            weights.extend([1.0 - secondary_weight, secondary_weight, 0.0, 0.0])
+    return joints, weights, secondary_bone is not None
+
+
 def _rotate(
     point: tuple[float, float, float], pivot: tuple[float, float], angle_degrees: float
 ) -> tuple[float, float, float]:
@@ -231,8 +315,8 @@ def _target_vertices(
             return [
                 (scaled_left, center[1] - half_height, base[0][2]),
                 (scaled_right, center[1] - half_height, base[1][2]),
-                (scaled_right, center[1] + half_height, base[2][2]),
-                (scaled_left, center[1] + half_height, base[3][2]),
+                (scaled_left, center[1] + half_height, base[2][2]),
+                (scaled_right, center[1] + half_height, base[3][2]),
             ]
         return [_scale(point, center, *scales[target]) for point in base]
     if target == "happy":
@@ -331,7 +415,8 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
             }
         )
 
-        base = _quad(sprite, canvas_size)
+        base, uvs, indices, grid = _grid_geometry(sprite, canvas_size)
+        vertex_count = len(base)
         position_values = _flatten(base)
         position_view = binary.add(
             struct.pack(f"<{len(position_values)}f", *position_values), target=34962
@@ -341,43 +426,73 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
             {
                 "bufferView": position_view,
                 "componentType": 5126,
-                "count": 4,
+                "count": vertex_count,
                 "type": "VEC3",
                 "min": [min(point[axis] for point in base) for axis in range(3)],
                 "max": [max(point[axis] for point in base) for axis in range(3)],
             }
         )
-        normal_view = binary.add(struct.pack("<12f", *([0.0, 0.0, 1.0] * 4)), target=34962)
+        normal_values = [0.0, 0.0, 1.0] * vertex_count
+        normal_view = binary.add(
+            struct.pack(f"<{len(normal_values)}f", *normal_values), target=34962
+        )
         normal_accessor = len(accessors)
         accessors.append(
-            {"bufferView": normal_view, "componentType": 5126, "count": 4, "type": "VEC3"}
+            {
+                "bufferView": normal_view,
+                "componentType": 5126,
+                "count": vertex_count,
+                "type": "VEC3",
+            }
         )
-        uv_view = binary.add(
-            struct.pack("<8f", 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0), target=34962
-        )
+        uv_values = [component for point in uvs for component in point]
+        uv_view = binary.add(struct.pack(f"<{len(uv_values)}f", *uv_values), target=34962)
         uv_accessor = len(accessors)
-        accessors.append({"bufferView": uv_view, "componentType": 5126, "count": 4, "type": "VEC2"})
-        joint = joint_lookup[sprite.bone]
-        joint_view = binary.add(bytes([joint, 0, 0, 0] * 4), target=34962)
+        accessors.append(
+            {
+                "bufferView": uv_view,
+                "componentType": 5126,
+                "count": vertex_count,
+                "type": "VEC2",
+            }
+        )
+        joint_values, weight_values, has_gradient_weights = _skin_data(
+            sprite, grid, joint_lookup
+        )
+        joint_view = binary.add(bytes(joint_values), target=34962)
         joint_accessor = len(accessors)
         accessors.append(
-            {"bufferView": joint_view, "componentType": 5121, "count": 4, "type": "VEC4"}
+            {
+                "bufferView": joint_view,
+                "componentType": 5121,
+                "count": vertex_count,
+                "type": "VEC4",
+            }
         )
-        weight_view = binary.add(struct.pack("<16f", *([1.0, 0.0, 0.0, 0.0] * 4)), target=34962)
+        weight_view = binary.add(
+            struct.pack(f"<{len(weight_values)}f", *weight_values), target=34962
+        )
         weight_accessor = len(accessors)
         accessors.append(
-            {"bufferView": weight_view, "componentType": 5126, "count": 4, "type": "VEC4"}
+            {
+                "bufferView": weight_view,
+                "componentType": 5126,
+                "count": vertex_count,
+                "type": "VEC4",
+            }
         )
-        index_view = binary.add(struct.pack("<6H", 0, 1, 2, 0, 2, 3), target=34963)
+        index_view = binary.add(
+            struct.pack(f"<{len(indices)}H", *indices), target=34963
+        )
         index_accessor = len(accessors)
         accessors.append(
             {
                 "bufferView": index_view,
                 "componentType": 5123,
-                "count": 6,
+                "count": len(indices),
                 "type": "SCALAR",
                 "min": [0],
-                "max": [3],
+                "max": [vertex_count - 1],
             }
         )
 
@@ -388,7 +503,7 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
             transformed = _target_vertices(sprite, target_name, base, bone_world)
             offsets = [
                 tuple(transformed[index][axis] - base[index][axis] for axis in range(3))
-                for index in range(4)
+                for index in range(vertex_count)
             ]
             offset_values = _flatten(offsets)
             offset_view = binary.add(
@@ -399,7 +514,7 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
                 {
                     "bufferView": offset_view,
                     "componentType": 5126,
-                    "count": 4,
+                    "count": vertex_count,
                     "type": "VEC3",
                     "min": [min(point[axis] for point in offsets) for axis in range(3)],
                     "max": [max(point[axis] for point in offsets) for axis in range(3)],
@@ -421,10 +536,17 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
         }
         if targets:
             primitive["targets"] = targets
-        mesh: dict[str, Any] = {"name": f"{sprite.name}Mesh", "primitives": [primitive]}
+        mesh: dict[str, Any] = {
+            "name": f"{sprite.name}Mesh",
+            "primitives": [primitive],
+            "extras": {
+                "grid": list(grid),
+                "gradientWeights": has_gradient_weights,
+            },
+        }
         if names:
             mesh["weights"] = [0.0] * len(names)
-            mesh["extras"] = {"targetNames": names}
+            mesh["extras"]["targetNames"] = names
         meshes.append(mesh)
         node = _add_node(nodes, sprite.name)
         nodes[node].update({"mesh": mesh_index, "skin": 0})
@@ -592,5 +714,13 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 2048
         "bytes": len(glb),
         "layers": len(sprites),
         "meshes": len(meshes),
+        "vertices": sum(
+            accessors[mesh["primitives"][0]["attributes"]["POSITION"]]["count"]
+            for mesh in meshes
+        ),
+        "deformableMeshes": sum(mesh["extras"]["grid"] != [1, 1] for mesh in meshes),
+        "gradientWeightedMeshes": sum(
+            mesh["extras"]["gradientWeights"] for mesh in meshes
+        ),
         "expressions": {"preset": len(preset), "custom": len(custom)},
     }
