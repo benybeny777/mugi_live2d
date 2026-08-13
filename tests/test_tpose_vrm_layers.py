@@ -30,6 +30,7 @@ def test_tpose_source_produces_the_vrm_contract() -> None:
     assert torso.canvas_box[2] > right.canvas_box[0]
     assert left_underlay.canvas_box[2] > left.canvas_box[2]
     assert right_underlay.canvas_box[0] < right.canvas_box[0]
+    assert torso.canvas_box[3] > round(canvas[1] * 0.56)
     names = {sprite.name for sprite in sprites}
     assert {
         "face_cleanup",

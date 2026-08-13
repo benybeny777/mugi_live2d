@@ -375,8 +375,8 @@ def _target_vertices(
     if target == "blink":
         bottom = min(point[1] for point in base)
         top = max(point[1] for point in base)
-        close_line = bottom + (top - bottom) * 0.38
-        return [(x, close_line + (y - center[1]) * 0.05, z) for x, y, z in base]
+        close_line = bottom + (top - bottom) * 0.52
+        return [(x, close_line + (y - center[1]) * 0.025, z) for x, y, z in base]
     if target == "wide":
         return [_scale(point, center, 1.02, 1.09) for point in base]
     if target.startswith("look"):
@@ -389,17 +389,17 @@ def _target_vertices(
         return [(x + movement[0], y + movement[1], z) for x, y, z in base]
     if target in {"aa", "ih", "ou", "ee", "oh"}:
         scales = {
-            "aa": (1.08, 2.20),
-            "ih": (1.35, 0.75),
-            "ou": (0.72, 1.55),
-            "ee": (1.45, 0.82),
-            "oh": (0.82, 1.95),
+            "aa": (1.02, 1.25),
+            "ih": (1.22, 0.58),
+            "ou": (0.68, 1.02),
+            "ee": (1.28, 0.62),
+            "oh": (0.76, 1.18),
         }
         columns, rows = _grid_size(sprite.name)
         width_scale, height_scale = scales[target]
         source_height = max(point[1] for point in base) - min(point[1] for point in base)
         if sprite.name == "mouth_inside":
-            source_height = 1.8 * (sprite.canvas_box[3] - sprite.canvas_box[1]) / 4175
+            source_height = 0.72 * (sprite.canvas_box[3] - sprite.canvas_box[1]) / 4175
         source_height = max(source_height, 1e-5)
         shaped: list[tuple[float, float, float]] = []
         for index, (x, _, z) in enumerate(base):
@@ -515,6 +515,7 @@ def build_layered_vrm_from_sprites(
     textures: list[dict[str, Any]] = []
     images: list[dict[str, Any]] = []
     sprite_nodes: dict[str, int] = {}
+    sprite_materials: dict[str, int] = {}
     target_indices: dict[str, dict[str, int]] = {}
 
     thumbnail = flatten_sprites(canvas_size, sprites)
@@ -532,11 +533,17 @@ def build_layered_vrm_from_sprites(
         texture_index = len(textures)
         textures.append({"sampler": 0, "source": image_index})
         material_index = len(materials)
+        sprite_materials[sprite.name] = material_index
         materials.append(
             {
                 "name": f"{sprite.name}Unlit",
                 "pbrMetallicRoughness": {
-                    "baseColorFactor": [1.0, 1.0, 1.0, 1.0],
+                    "baseColorFactor": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0 if sprite.rest_visible else 0.0,
+                    ],
                     "baseColorTexture": {"index": texture_index},
                     "metallicFactor": 0.0,
                     "roughnessFactor": 1.0,
@@ -725,6 +732,13 @@ def build_layered_vrm_from_sprites(
             sprite_nodes[sprite_name], target_indices[sprite_name][target_name], weight
         )
 
+    def material_alpha(sprite_name: str, alpha: float) -> dict[str, Any]:
+        return {
+            "material": sprite_materials[sprite_name],
+            "type": "color",
+            "targetValue": [1.0, 1.0, 1.0, alpha],
+        }
+
     expressive_names = {
         "left_eye_white", "right_eye_white", "left_iris", "right_iris",
         "left_lashes", "right_lashes", "mouth", "mouth_inside",
@@ -734,14 +748,35 @@ def build_layered_vrm_from_sprites(
         left_eye_parts = ["right_eye_white", "right_iris", "right_lashes"]
         right_eye_parts = ["left_eye_white", "left_iris", "left_lashes"]
         both_eye_parts = [*left_eye_parts, *right_eye_parts]
+        left_lid_parts = ["right_lashes"]
+        right_lid_parts = ["left_lashes"]
+        left_fade_parts = ["right_eye_white", "right_iris"]
+        right_fade_parts = ["left_eye_white", "left_iris"]
         mouth_parts = ["mouth", "mouth_inside"]
         preset = {
-            "blinkLeft": {"morphTargetBinds": [bind(name, "blink") for name in left_eye_parts]},
-            "blinkRight": {"morphTargetBinds": [bind(name, "blink") for name in right_eye_parts]},
-            "blink": {"morphTargetBinds": [bind(name, "blink") for name in both_eye_parts]},
+            "blinkLeft": {
+                "morphTargetBinds": [bind(name, "blink") for name in left_lid_parts],
+                "materialColorBinds": [material_alpha(name, 0.0) for name in left_fade_parts],
+            },
+            "blinkRight": {
+                "morphTargetBinds": [bind(name, "blink") for name in right_lid_parts],
+                "materialColorBinds": [material_alpha(name, 0.0) for name in right_fade_parts],
+            },
+            "blink": {
+                "morphTargetBinds": [
+                    bind(name, "blink") for name in [*left_lid_parts, *right_lid_parts]
+                ],
+                "materialColorBinds": [
+                    material_alpha(name, 0.0)
+                    for name in [*left_fade_parts, *right_fade_parts]
+                ],
+            },
         }
         for vowel in ("aa", "ih", "ou", "ee", "oh"):
-            preset[vowel] = {"morphTargetBinds": [bind(name, vowel) for name in mouth_parts]}
+            preset[vowel] = {
+                "morphTargetBinds": [bind(name, vowel) for name in mouth_parts],
+                "materialColorBinds": [material_alpha("mouth_inside", 1.0)],
+            }
         for direction in ("lookLeft", "lookRight", "lookUp", "lookDown"):
             preset[direction] = {
                 "morphTargetBinds": [bind("left_iris", direction), bind("right_iris", direction)]
@@ -750,7 +785,11 @@ def build_layered_vrm_from_sprites(
             "happy": {
                 "morphTargetBinds": [
                     bind("mouth", "happy"),
-                    *[bind(name, "blink", 0.15) for name in both_eye_parts],
+                    *[bind(name, "blink", 0.12) for name in [*left_lid_parts, *right_lid_parts]],
+                ],
+                "materialColorBinds": [
+                    material_alpha(name, 0.88)
+                    for name in [*left_fade_parts, *right_fade_parts]
                 ],
                 "overrideMouth": "blend",
             },
@@ -768,7 +807,11 @@ def build_layered_vrm_from_sprites(
             "relaxed": {
                 "morphTargetBinds": [
                     bind("mouth", "happy", 0.35),
-                    *[bind(name, "blink", 0.35) for name in both_eye_parts],
+                    *[bind(name, "blink", 0.25) for name in [*left_lid_parts, *right_lid_parts]],
+                ],
+                "materialColorBinds": [
+                    material_alpha(name, 0.72)
+                    for name in [*left_fade_parts, *right_fade_parts]
                 ],
                 "overrideBlink": "blend",
                 "overrideMouth": "blend",
@@ -781,6 +824,7 @@ def build_layered_vrm_from_sprites(
                 ],
                 "overrideBlink": "blend",
                 "overrideMouth": "blend",
+                "materialColorBinds": [material_alpha("mouth_inside", 1.0)],
             },
         })
     else:

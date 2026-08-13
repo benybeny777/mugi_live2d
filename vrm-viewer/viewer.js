@@ -36,7 +36,7 @@ const licenseUrl = "https://github.com/benybeny777/mugi_live2d/blob/main/docs/VR
 let vrm = null;
 let blinkStartedAt = Number.NEGATIVE_INFINITY;
 let nextBlinkAt = 1400;
-const blinkDuration = 280;
+const blinkDuration = 340;
 const manualNeutralBlink = 0;
 let elapsed = 0;
 let motionTimeline = null;
@@ -193,8 +193,8 @@ function applyBoneMotion() {
     leftLowerLeg: -0.009 * delayed,
     rightUpperLeg: -0.007 * sway,
     rightLowerLeg: 0.009 * delayed,
-    leftUpperArm: -1.05,
-    rightUpperArm: 1.05,
+    leftUpperArm: -1.22,
+    rightUpperArm: 1.22,
   };
   boneRest.forEach(({ bone, quaternion }, name) => {
     bone.quaternion.copy(quaternion);

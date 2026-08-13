@@ -14,7 +14,7 @@ UPPER_TORSO_RATIO = 0.150
 ARM_BOTTOM_RATIO = 0.345
 TORSO_LEFT_RATIO = 0.34
 TORSO_RIGHT_RATIO = 0.66
-LEG_TOP_RATIO = 0.535
+LEG_TOP_RATIO = 0.550
 
 
 def _ellipse(
@@ -68,7 +68,11 @@ def _foreground(image: Image.Image) -> tuple[np.ndarray, np.ndarray]:
     sizes[0] = 0
     character = labels == int(sizes.argmax())
     character = ndimage.binary_fill_holes(character)
-    fringe = ndimage.binary_dilation(character, iterations=2)
+    # Trim the generated source's pale outer matte before reconstructing
+    # antialiasing. Keeping that outermost ring creates a visible white halo
+    # on dark runtime backgrounds.
+    character = ndimage.binary_erosion(character, iterations=2)
+    fringe = ndimage.binary_dilation(character, iterations=1)
     edge = np.clip(contrast * 18, 0, 255).astype(np.uint8)
     boundary = character & ~ndimage.binary_erosion(character, iterations=2)
     alpha = np.where(character, 255, np.where(fringe, edge, 0)).astype(np.uint8)
@@ -225,15 +229,19 @@ def extract_tpose_sprites(source_path: Path) -> tuple[tuple[int, int], list[Laye
     shoulder_alpha = np.roll(alpha, -shoulder_sample_offset, axis=0)
     shoulder_alpha[-shoulder_sample_offset:] = 0
     shoulder_progress = np.clip((yy - upper_torso) / max(arm_bottom - upper_torso, 1), 0.0, 1.0)
-    torso_half_width = width * (0.040 + 0.095 * shoulder_progress)
+    skirt_progress = np.clip((yy - arm_bottom) / max(leg_top - arm_bottom, 1), 0.0, 1.0)
+    torso_half_width = width * np.maximum(
+        0.040 + 0.095 * shoulder_progress,
+        0.135 + 0.055 * skirt_progress,
+    )
     torso = (
         (upper_garment | lower_body)
-        & (yy < leg_top)
-        & (xx >= np.maximum(torso_left, center - torso_half_width))
-        & (xx <= np.minimum(torso_right, center + torso_half_width))
+        & (yy < height * 0.575)
+        & (xx >= np.minimum(torso_left, center - torso_half_width))
+        & (xx <= np.maximum(torso_right, center + torso_half_width))
     )
-    left_leg = (yy >= leg_top) & (xx < center)
-    right_leg = (yy >= leg_top) & (xx >= center)
+    left_leg = (yy >= height * 0.535) & (xx < center)
+    right_leg = (yy >= height * 0.535) & (xx >= center)
 
     sprites = [
         _sprite(

@@ -155,7 +155,7 @@ def _layer_motion(
         shoulder_x = left if name == "screen_right_arm" else right
         motion.update(
             pivot=(shoulder_x, (top + bottom) / 2),
-            angle=direction * (60.0 + 2.0 * sway) + greeting,
+            angle=direction * (70.0 + 2.0 * sway) + greeting,
         )
     elif "leg" in name:
         direction = -1.0 if name == "screen_right_leg" else 1.0

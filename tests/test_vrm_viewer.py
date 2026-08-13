@@ -21,9 +21,9 @@ def test_vrm_viewer_can_open_the_isolated_tpose_experiment() -> None:
 
     assert 'modelVariant === "tpose"' in viewer
     assert '"../temp/mugi-tpose-experiment.vrm"' in viewer
-    assert "leftUpperArm: -1.05" in viewer
-    assert "rightUpperArm: 1.05" in viewer
-    assert "const blinkDuration = 280;" in viewer
+    assert "leftUpperArm: -1.22" in viewer
+    assert "rightUpperArm: 1.22" in viewer
+    assert "const blinkDuration = 340;" in viewer
     assert "const manualNeutralBlink = 0;" in viewer
 
 
