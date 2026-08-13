@@ -493,8 +493,13 @@ def _prepare_sprite_texture(image: Image.Image, scale: float) -> Image.Image:
     return Image.merge("RGBA", (*rgb.split(), alpha))
 
 
-def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 4096) -> dict[str, Any]:
-    canvas_size, sprites = extract_layer_sprites(psd_path)
+def build_layered_vrm_from_sprites(
+    canvas_size: tuple[int, int],
+    sprites: list[LayerSprite],
+    output: Path,
+    max_texture_size: int = 4096,
+) -> dict[str, Any]:
+    """Build a layered VRM from an already reviewed sprite set."""
     binary = BinaryBuilder()
     nodes: list[dict[str, Any]] = []
     root, bones, bone_world = _build_skeleton(nodes)
@@ -720,23 +725,28 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 4096
             sprite_nodes[sprite_name], target_indices[sprite_name][target_name], weight
         )
 
-    left_eye_parts = ["right_eye_white", "right_iris", "right_lashes"]
-    right_eye_parts = ["left_eye_white", "left_iris", "left_lashes"]
-    both_eye_parts = [*left_eye_parts, *right_eye_parts]
-    mouth_parts = ["mouth", "mouth_inside"]
-    preset: dict[str, Any] = {
-        "blinkLeft": {"morphTargetBinds": [bind(name, "blink") for name in left_eye_parts]},
-        "blinkRight": {"morphTargetBinds": [bind(name, "blink") for name in right_eye_parts]},
-        "blink": {"morphTargetBinds": [bind(name, "blink") for name in both_eye_parts]},
+    expressive_names = {
+        "left_eye_white", "right_eye_white", "left_iris", "right_iris",
+        "left_lashes", "right_lashes", "mouth", "mouth_inside",
     }
-    for vowel in ("aa", "ih", "ou", "ee", "oh"):
-        preset[vowel] = {"morphTargetBinds": [bind(name, vowel) for name in mouth_parts]}
-    for direction in ("lookLeft", "lookRight", "lookUp", "lookDown"):
-        preset[direction] = {
-            "morphTargetBinds": [bind("left_iris", direction), bind("right_iris", direction)]
+    preset: dict[str, Any] = {}
+    if expressive_names <= sprite_nodes.keys():
+        left_eye_parts = ["right_eye_white", "right_iris", "right_lashes"]
+        right_eye_parts = ["left_eye_white", "left_iris", "left_lashes"]
+        both_eye_parts = [*left_eye_parts, *right_eye_parts]
+        mouth_parts = ["mouth", "mouth_inside"]
+        preset = {
+            "blinkLeft": {"morphTargetBinds": [bind(name, "blink") for name in left_eye_parts]},
+            "blinkRight": {"morphTargetBinds": [bind(name, "blink") for name in right_eye_parts]},
+            "blink": {"morphTargetBinds": [bind(name, "blink") for name in both_eye_parts]},
         }
-    preset.update(
-        {
+        for vowel in ("aa", "ih", "ou", "ee", "oh"):
+            preset[vowel] = {"morphTargetBinds": [bind(name, vowel) for name in mouth_parts]}
+        for direction in ("lookLeft", "lookRight", "lookUp", "lookDown"):
+            preset[direction] = {
+                "morphTargetBinds": [bind("left_iris", direction), bind("right_iris", direction)]
+            }
+        preset.update({
             "happy": {
                 "morphTargetBinds": [
                     bind("mouth", "happy"),
@@ -772,8 +782,16 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 4096
                 "overrideBlink": "blend",
                 "overrideMouth": "blend",
             },
-        }
-    )
+        })
+    else:
+        # Structural experiments remain valid VRM files while facial extraction
+        # is deliberately deferred; empty presets must not fake expressions.
+        for name in (
+            "blinkLeft", "blinkRight", "blink", "aa", "ih", "ou", "ee", "oh",
+            "happy", "angry", "sad", "relaxed", "surprised",
+            "lookLeft", "lookRight", "lookUp", "lookDown",
+        ):
+            preset[name] = {"morphTargetBinds": []}
     idle_sprites = [
         sprite.name for sprite in sprites if "idleLeft" in target_indices.get(sprite.name, {})
     ]
@@ -934,3 +952,9 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 4096
         "springBones": len(document["extensions"]["VRMC_springBone"]["springs"]),
         "expressions": {"preset": len(preset), "custom": len(custom)},
     }
+
+
+def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 4096) -> dict[str, Any]:
+    """Extract the canonical PSD sprites and build the layered VRM."""
+    canvas_size, sprites = extract_layer_sprites(psd_path)
+    return build_layered_vrm_from_sprites(canvas_size, sprites, output, max_texture_size)

@@ -16,6 +16,15 @@ def test_vrm_viewer_uses_local_pinned_runtime() -> None:
     )
 
 
+def test_vrm_viewer_can_open_the_isolated_tpose_experiment() -> None:
+    viewer = (ROOT / "vrm-viewer" / "viewer.js").read_text(encoding="utf-8")
+
+    assert 'modelVariant === "tpose"' in viewer
+    assert '"../temp/mugi-tpose-experiment.vrm"' in viewer
+    assert 'leftUpperArm: modelVariant === "tpose" ? -0.82 : 0' in viewer
+    assert 'rightUpperArm: modelVariant === "tpose" ? 0.82 : 0' in viewer
+
+
 def test_recording_uses_high_density_opaque_background() -> None:
     viewer = (ROOT / "vrm-viewer" / "viewer.js").read_text(encoding="utf-8")
 

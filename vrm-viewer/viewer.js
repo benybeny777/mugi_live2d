@@ -14,6 +14,10 @@ const lookX = document.querySelector("#look-x");
 const lookY = document.querySelector("#look-y");
 const blinkButton = document.querySelector("#blink");
 const recordButton = document.querySelector("#record");
+const modelVariant = new URLSearchParams(window.location.search).get("model");
+const modelUrl = modelVariant === "tpose"
+  ? "../temp/mugi-tpose-experiment.vrm"
+  : "../exports/vrm/mugi.vrm";
 
 const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
 const defaultPixelRatio = Math.min(window.devicePixelRatio, 2);
@@ -59,7 +63,7 @@ loader.register(
   }),
 );
 loader.load(
-  "../exports/vrm/mugi.vrm",
+  modelUrl,
   (gltf) => {
     vrm = gltf.userData.vrm;
     scene.add(vrm.scene);
@@ -70,6 +74,8 @@ loader.load(
       "leftLowerLeg",
       "rightUpperLeg",
       "rightLowerLeg",
+      "leftUpperArm",
+      "rightUpperArm",
     ].forEach((name) => {
       const bone = vrm.humanoid?.getNormalizedBoneNode(name);
       if (bone) boneRest.set(name, { bone, quaternion: bone.quaternion.clone() });
@@ -187,6 +193,8 @@ function applyBoneMotion() {
     leftLowerLeg: -0.009 * delayed,
     rightUpperLeg: -0.007 * sway,
     rightLowerLeg: 0.009 * delayed,
+    leftUpperArm: modelVariant === "tpose" ? -0.82 : 0,
+    rightUpperArm: modelVariant === "tpose" ? 0.82 : 0,
   };
   boneRest.forEach(({ bone, quaternion }, name) => {
     bone.quaternion.copy(quaternion);
