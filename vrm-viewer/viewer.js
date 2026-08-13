@@ -193,8 +193,8 @@ function applyBoneMotion() {
     leftLowerLeg: -0.009 * delayed,
     rightUpperLeg: -0.007 * sway,
     rightLowerLeg: 0.009 * delayed,
-    leftUpperArm: modelVariant === "tpose" ? -0.82 : 0,
-    rightUpperArm: modelVariant === "tpose" ? 0.82 : 0,
+    leftUpperArm: modelVariant === "tpose" ? -1.05 : 0,
+    rightUpperArm: modelVariant === "tpose" ? 1.05 : 0,
   };
   boneRest.forEach(({ bone, quaternion }, name) => {
     bone.quaternion.copy(quaternion);

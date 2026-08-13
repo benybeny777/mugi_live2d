@@ -12,8 +12,6 @@ REFERENCE_CANVAS = (2920, 4096)
 HEAD_BOTTOM_RATIO = 0.235
 UPPER_TORSO_RATIO = 0.150
 ARM_BOTTOM_RATIO = 0.345
-SHOULDER_LEFT_RATIO = 0.385
-SHOULDER_RIGHT_RATIO = 0.615
 TORSO_LEFT_RATIO = 0.34
 TORSO_RIGHT_RATIO = 0.66
 LEG_TOP_RATIO = 0.535
@@ -86,15 +84,16 @@ def extract_tpose_sprites(source_path: Path) -> tuple[tuple[int, int], list[Laye
     head_bottom = round(height * HEAD_BOTTOM_RATIO)
     upper_torso = round(height * UPPER_TORSO_RATIO)
     arm_bottom = round(height * ARM_BOTTOM_RATIO)
-    shoulder_left = round(width * SHOULDER_LEFT_RATIO)
-    shoulder_right = round(width * SHOULDER_RIGHT_RATIO)
     torso_left = round(width * TORSO_LEFT_RATIO)
     torso_right = round(width * TORSO_RIGHT_RATIO)
     leg_top = round(height * LEG_TOP_RATIO)
     center = width // 2
 
-    head = yy < head_bottom
     rgb = np.asarray(source.convert("RGB"), dtype=np.int16)
+    head_core_bottom = round(height * 0.205)
+    hair_or_outline = (rgb[:, :, 0] < 165) & (rgb[:, :, 1] < 150) & (rgb[:, :, 2] < 135)
+    head_center = np.abs(xx - center) <= width * 0.13
+    head = (yy < head_core_bottom) | ((yy < head_bottom) & (hair_or_outline | head_center))
     upper_garment = (
         (yy >= upper_torso)
         & (yy < head_bottom)
@@ -104,10 +103,33 @@ def extract_tpose_sprites(source_path: Path) -> tuple[tuple[int, int], list[Laye
         & (rgb[:, :, 2] >= 85)
     )
     lower_body = yy >= head_bottom
-    left_arm = (upper_garment | lower_body) & (yy < arm_bottom) & (xx <= shoulder_left)
-    right_arm = (upper_garment | lower_body) & (yy < arm_bottom) & (xx >= shoulder_right)
-    shoulder_progress = np.clip((yy - upper_torso) / max(head_bottom - upper_torso, 1), 0.0, 1.0)
-    torso_half_width = width * (0.035 + 0.125 * shoulder_progress)
+    arm_join_progress = np.clip((yy - upper_torso) / max(head_bottom - upper_torso, 1), 0.0, 1.0)
+    left_arm_edge = width * (0.325 + 0.045 * arm_join_progress)
+    right_arm_edge = width - left_arm_edge
+    left_arm = (upper_garment | lower_body) & (yy < arm_bottom) & (xx <= left_arm_edge)
+    right_arm = (upper_garment | lower_body) & (yy < arm_bottom) & (xx >= right_arm_edge)
+    # Put the ellipse apex on the source shoulder line. If its apex starts
+    # above that line, the original T-pose's horizontal contour stays visible
+    # and makes the lowered shoulder look square.
+    shoulder_center_y = height * 0.245
+    shoulder_radius_x = width * 0.040
+    shoulder_radius_y = height * 0.060
+    left_shoulder_underlay = (
+        ((xx - width * 0.390) / shoulder_radius_x) ** 2
+        + ((yy - shoulder_center_y) / shoulder_radius_y) ** 2
+        <= 1.0
+    ) & (upper_garment | lower_body)
+    right_shoulder_underlay = (
+        ((xx - width * 0.610) / shoulder_radius_x) ** 2
+        + ((yy - shoulder_center_y) / shoulder_radius_y) ** 2
+        <= 1.0
+    ) & (upper_garment | lower_body)
+    shoulder_sample_offset = round(height * 0.020)
+    shoulder_rgb = np.roll(recovered_rgb, -shoulder_sample_offset, axis=0)
+    shoulder_alpha = np.roll(alpha, -shoulder_sample_offset, axis=0)
+    shoulder_alpha[-shoulder_sample_offset:] = 0
+    shoulder_progress = np.clip((yy - upper_torso) / max(arm_bottom - upper_torso, 1), 0.0, 1.0)
+    torso_half_width = width * (0.040 + 0.095 * shoulder_progress)
     torso = (
         (upper_garment | lower_body)
         & (yy < leg_top)
@@ -123,6 +145,18 @@ def extract_tpose_sprites(source_path: Path) -> tuple[tuple[int, int], list[Laye
         ),
         _sprite(
             "screen_right_leg", "leftUpperLeg", -0.030, _masked(recovered_rgb, alpha, right_leg)
+        ),
+        _sprite(
+            "screen_left_shoulder_underlay",
+            "spine",
+            -0.025,
+            _masked(shoulder_rgb, shoulder_alpha, left_shoulder_underlay),
+        ),
+        _sprite(
+            "screen_right_shoulder_underlay",
+            "spine",
+            -0.025,
+            _masked(shoulder_rgb, shoulder_alpha, right_shoulder_underlay),
         ),
         _sprite(
             "screen_left_arm", "rightUpperArm", -0.020, _masked(recovered_rgb, alpha, left_arm)

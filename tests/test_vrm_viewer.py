@@ -21,8 +21,8 @@ def test_vrm_viewer_can_open_the_isolated_tpose_experiment() -> None:
 
     assert 'modelVariant === "tpose"' in viewer
     assert '"../temp/mugi-tpose-experiment.vrm"' in viewer
-    assert 'leftUpperArm: modelVariant === "tpose" ? -0.82 : 0' in viewer
-    assert 'rightUpperArm: modelVariant === "tpose" ? 0.82 : 0' in viewer
+    assert 'leftUpperArm: modelVariant === "tpose" ? -1.05 : 0' in viewer
+    assert 'rightUpperArm: modelVariant === "tpose" ? 1.05 : 0' in viewer
 
 
 def test_recording_uses_high_density_opaque_background() -> None:
