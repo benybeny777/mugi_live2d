@@ -25,6 +25,13 @@ def test_recording_uses_high_density_opaque_background() -> None:
     assert "renderer.setClearColor(0x000000, 0)" in viewer
 
 
+def test_manual_neutral_keeps_natural_resting_eyelids() -> None:
+    viewer = (ROOT / "vrm-viewer" / "viewer.js").read_text(encoding="utf-8")
+
+    assert "const manualNeutralBlink = 0.15" in viewer
+    assert '!autoMotion.checked && !emotion.value ? manualNeutralBlink : 0' in viewer
+
+
 def test_motion_timeline_is_contiguous_and_loopable() -> None:
     timeline = json.loads(
         (ROOT / "vrm-viewer" / "motions" / "mugi-timeline.json").read_text(

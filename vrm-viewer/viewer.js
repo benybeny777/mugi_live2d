@@ -33,6 +33,7 @@ let vrm = null;
 let blinkStartedAt = Number.NEGATIVE_INFINITY;
 let nextBlinkAt = 1400;
 const blinkDuration = 190;
+const manualNeutralBlink = 0.15;
 let elapsed = 0;
 let motionTimeline = null;
 const boneRest = new Map();
@@ -138,6 +139,7 @@ function applyExpressions(now) {
   }
   clearGroup(["aa", "ih", "ou", "ee", "oh", "blink"]);
   setExpression(activeVowel, mouthValue);
+  setExpression("blink", !autoMotion.checked && !emotion.value ? manualNeutralBlink : 0);
   setExpression("blinkLeft", blinkCurve(now));
   setExpression("blinkRight", blinkCurve(now, 18));
   setExpression("lookLeft", Math.max(0, horizontal));
