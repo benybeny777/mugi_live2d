@@ -7,7 +7,7 @@ from pathlib import Path
 from pipeline.vrm_layers import extract_layer_sprites, flatten_sprites
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_PSD = ROOT / "work" / "psd" / "hiyori" / "mugi-hiyori-compatible-final.psd"
+DEFAULT_PSD = ROOT / "work" / "psd" / "hiyori" / "mugi-hiyori-compatible-final-2x.psd"
 DEFAULT_OUTPUT = ROOT / "temp" / "vrm-layers"
 
 

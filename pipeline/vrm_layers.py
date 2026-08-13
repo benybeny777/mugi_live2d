@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from PIL import Image, ImageChops, ImageDraw
 from psd_tools import PSDImage
 from psd_tools.api.layers import Layer
 
+REFERENCE_CANVAS_SIZE = (2976, 4175)
 CANVAS_CENTER_X = 1488
 LEG_SPLIT_TOP = 2230
 TORSO_SPLIT_BOTTOM = 2420
@@ -26,7 +29,7 @@ def _layer_paths(psd: PSDImage) -> dict[str, Layer]:
     result: dict[str, Layer] = {}
 
     def visit(group: PSDImage | Layer, prefix: str = "") -> None:
-        for layer in group:
+        for layer in cast(Iterable[Layer], group):
             path = f"{prefix}/{layer.name}"
             if layer.is_group():
                 visit(layer, path)
@@ -64,6 +67,17 @@ def _masked(image: Image.Image, box: tuple[int, int, int, int]) -> Image.Image:
     return result
 
 
+def _scaled_split_coordinates(canvas_size: tuple[int, int]) -> tuple[int, int, int]:
+    """Scale body split guides from the approved source canvas to a resized PSD."""
+    width_scale = canvas_size[0] / REFERENCE_CANVAS_SIZE[0]
+    height_scale = canvas_size[1] / REFERENCE_CANVAS_SIZE[1]
+    return (
+        round(CANVAS_CENTER_X * width_scale),
+        round(LEG_SPLIT_TOP * height_scale),
+        round(TORSO_SPLIT_BOTTOM * height_scale),
+    )
+
+
 def _sprite(
     name: str,
     bone: str,
@@ -82,12 +96,13 @@ def extract_layer_sprites(psd_path: Path) -> tuple[tuple[int, int], list[LayerSp
     psd = PSDImage.open(psd_path)
     canvas_size = psd.size
     layers = _layer_paths(psd)
+    center_x, leg_split_top, torso_split_bottom = _scaled_split_coordinates(canvas_size)
 
     body = _composite_layers(canvas_size, layers, ["/身体/体"])
-    torso = _masked(body, (0, 0, canvas_size[0], TORSO_SPLIT_BOTTOM))
-    screen_left_leg = _masked(body, (0, LEG_SPLIT_TOP, CANVAS_CENTER_X, canvas_size[1]))
+    torso = _masked(body, (0, 0, canvas_size[0], torso_split_bottom))
+    screen_left_leg = _masked(body, (0, leg_split_top, center_x, canvas_size[1]))
     screen_right_leg = _masked(
-        body, (CANVAS_CENTER_X, LEG_SPLIT_TOP, canvas_size[0], canvas_size[1])
+        body, (center_x, leg_split_top, canvas_size[0], canvas_size[1])
     )
 
     back_hair = _composite_layers(

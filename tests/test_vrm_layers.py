@@ -2,10 +2,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pipeline.vrm_layers import extract_layer_sprites, flatten_sprites
+from pipeline.vrm_layers import (
+    _scaled_split_coordinates,
+    extract_layer_sprites,
+    flatten_sprites,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 PSD = ROOT / "work" / "psd" / "hiyori" / "mugi-hiyori-compatible-final.psd"
+
+
+def test_split_coordinates_scale_with_resized_psd() -> None:
+    assert _scaled_split_coordinates((2976, 4175)) == (1488, 2230, 2420)
+    assert _scaled_split_coordinates((5952, 8350)) == (2976, 4460, 4840)
 
 
 def test_final_psd_produces_expected_vrm_sprites() -> None:
