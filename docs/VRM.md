@@ -2,19 +2,19 @@
 
 ## 方針
 
-最初の VRM 版は、完成PSDのパーツを複数の透過カードへ貼った「多層ペラ板 VRM」です。
-元の絵柄を保ったまま、VRM 1.0 の読み込み・表示とパーツ単位の動きを試すモデルです。
+現在の VRM 版は、Photoshopで高解像度化した同一Tポーズ原画を複数の透過カードへ分けた「多層ペラ板 VRM」です。
+元の絵柄を保ちつつ、腕の分離、自然な肩の重なり、表情と視線を実装しています。
 Live2D 版は変更しません。
 
 - 形式: VRM 1.0（GLB コンテナ）
-- テクスチャ: `work/psd/hiyori/mugi-hiyori-compatible-final.psd` から18パーツを抽出して格納
+- テクスチャ: `work/psd/tpose/mugi-tpose-source-v1-photoshop-pd2-preview.png` から17パーツを抽出して格納
 - 表示: 両面・Unlit・アルファ透過
 - 身長: 1.8 m 相当
 - リグ: VRM 1.0 の必須 Humanoid ボーンと chest / neck を階層で収録
-- メッシュ: 18枚・合計459頂点。胴体、腕、脚、髪、装飾に加えて目・まつ毛・口も格子分割
+- メッシュ: 17枚・合計347頂点。頭、胴体、腕、肩下地、脚、目、虹彩、まつ毛、口を分割
 - 表情: blink / blinkLeft / blinkRight、視線4方向、5母音、happy / angry / sad / relaxed / surprised
 - アイドル補助: `breath` / `idleLeft` / `idleRight` / `greet` カスタム Expression
-- スキン: 胴体はspine→chest、脚はupper→lowerへ段階ウェイト。腕は肩固定モーフ、顔パーツはheadへ固定
+- スキン: 胴体はspine→chest、脚はupper→lowerへ段階ウェイト。腕は上腕ボーン、肩下地はspine、顔パーツはheadへ固定
 - 揺れ物: VRMC_springBone 1.0で後髪・前髪・星アクセサリーの3チェーン、5可動ジョイント
 
 これは正面絵を 3D 空間に立て、カードごとのメッシュ変形で顔、呼吸、手足、髪の動きを表現する
@@ -50,7 +50,7 @@ READMEのGIFをクリックすると、同じ最新版の高品質[MP4](media/mu
 リポジトリルートで実行します。
 
 ```powershell
-uv run python -m scripts.build_vrm
+uv run python -m scripts.build_tpose_vrm_experiment
 uv run python -m scripts.validate_vrm exports/vrm/mugi.vrm
 uv run python -m scripts.validate_vrm_release
 uv run python -m scripts.validate_vrm_visual
@@ -65,10 +65,10 @@ uv run python -m scripts.export_vrm_layers
 
 生成スクリプトは完成PSDから `exports/vrm/mugi.vrm` を再作成します。VRM は Git LFS で管理します。
 検証スクリプトは GLB 構造、VRM 1.0 メタデータ、必須 Humanoid ボーン、ボーン階層、埋め込み画像、
-18カードメッシュ、459頂点、スキン、顔格子8枚、標準17種・カスタム4種の Expression、
+17カードメッシュ、347頂点、スキン、顔格子8枚、標準17種・カスタム4種の Expression、
 Spring Bone 3チェーンと各モーフの結線を確認します。
 
-リリース検証は上記に加えて、18メッシュ・459頂点・顔格子8枚・Expression 21種・
+リリース検証は上記に加えて、17メッシュ・347頂点・顔格子8枚・Expression 21種・
 Spring Bone 3チェーン/5可動ジョイント、10 MiB以下の容量、READMEの最新プレビューリンク、
 GIF解像度、MP4コンテナ、idle/greet/talkタイムラインを一括確認します。
 

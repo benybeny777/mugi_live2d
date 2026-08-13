@@ -12,11 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = (
     ROOT / "work" / "psd" / "tpose" / "mugi-tpose-source-v1-photoshop-pd2-preview.png"
 )
-DEFAULT_OUTPUT = ROOT / "temp" / "mugi-tpose-experiment.vrm"
+DEFAULT_OUTPUT = ROOT / "exports" / "vrm" / "mugi.vrm"
 
 
 def main() -> int:
-    """Build the isolated T-pose body and approved-head VRM experiment."""
+    """Build the production Mugi VRM from the approved same-source T-pose art."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)

@@ -60,6 +60,28 @@ def test_generated_vrm_passes_structural_validation(tmp_path: Path) -> None:
         "lookUp",
         "lookDown",
     }
+    assert all(
+        vrm["expressions"]["preset"][name]["morphTargetBinds"]
+        for name in {
+            "blink",
+            "blinkLeft",
+            "blinkRight",
+            "aa",
+            "ih",
+            "ou",
+            "ee",
+            "oh",
+            "happy",
+            "angry",
+            "sad",
+            "relaxed",
+            "surprised",
+            "lookLeft",
+            "lookRight",
+            "lookUp",
+            "lookDown",
+        }
+    )
     assert set(vrm["expressions"]["custom"]) == {
         "breath",
         "idleLeft",

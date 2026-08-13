@@ -6,12 +6,15 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter
 
-from pipeline.vrm_layers import LayerSprite, extract_layer_sprites, flatten_sprites
+from pipeline.tpose_vrm_layers import extract_tpose_sprites
+from pipeline.vrm_layers import LayerSprite, flatten_sprites
 from scripts.validate_vrm import read_glb
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MODEL = ROOT / "exports" / "vrm" / "mugi.vrm"
-DEFAULT_PSD = ROOT / "work" / "psd" / "hiyori" / "mugi-hiyori-compatible-final.psd"
+DEFAULT_SOURCE = (
+    ROOT / "work" / "psd" / "tpose" / "mugi-tpose-source-v1-photoshop-pd2-preview.png"
+)
 DEFAULT_OUTPUT = ROOT / "docs" / "media" / "mugi-vrm-preview.gif"
 
 
@@ -147,11 +150,12 @@ def _layer_motion(
             sy=1 + 0.004 * breath,
         )
     elif "arm" in name:
-        direction = -1.0 if name == "screen_right_arm" else 1.0
+        direction = 1.0 if name == "screen_right_arm" else -1.0
         greeting = 4.0 * gesture if name == "screen_left_arm" else 0.0
+        shoulder_x = left if name == "screen_right_arm" else right
         motion.update(
-            pivot=((left + right) / 2, top),
-            angle=direction * 2.0 * sway + greeting,
+            pivot=(shoulder_x, (top + bottom) / 2),
+            angle=direction * (60.0 + 2.0 * sway) + greeting,
         )
     elif "leg" in name:
         direction = -1.0 if name == "screen_right_leg" else 1.0
@@ -172,14 +176,14 @@ def _layer_motion(
 
 def render_preview(
     model: Path,
-    psd: Path,
+    source: Path,
     output: Path,
     *,
     canvas_size: tuple[int, int] = (940, 720),
     frame_count: int = 80,
 ) -> None:
     read_glb(model)
-    source_size, sprites = extract_layer_sprites(psd)
+    source_size, sprites = extract_tpose_sprites(source)
     flattened = flatten_sprites(source_size, sprites)
     crop_box = _expanded_alpha_box(flattened)
     max_width = canvas_size[0] - 72
@@ -190,12 +194,11 @@ def render_preview(
     )
     prepared = _prepare_layers(source_size, sprites, crop_box, scale)
     surface_size = next(iter(prepared.values()))[1].size
-    neck_box = prepared["neck"][2]
-    head_pivot = ((neck_box[0] + neck_box[2]) / 2, neck_box[3])
+    head_box = prepared["head"][2]
+    head_pivot = ((head_box[0] + head_box[2]) / 2, head_box[3])
     head_parts = {
-        "back_hair",
-        "neck",
-        "face",
+        "head",
+        "face_cleanup",
         "left_eye_white",
         "right_eye_white",
         "left_iris",
@@ -204,8 +207,6 @@ def render_preview(
         "right_lashes",
         "mouth_inside",
         "mouth",
-        "front_hair",
-        "accessory",
     }
     background = _background(canvas_size)
     frames: list[Image.Image] = []
@@ -269,10 +270,10 @@ def main() -> int:
         description="Render a layered README preview from the Mugi VRM"
     )
     parser.add_argument("--model", type=Path, default=DEFAULT_MODEL)
-    parser.add_argument("--psd", type=Path, default=DEFAULT_PSD)
+    parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
-    render_preview(args.model.resolve(), args.psd.resolve(), args.output.resolve())
+    render_preview(args.model.resolve(), args.source.resolve(), args.output.resolve())
     print(f"VRM preview written: {args.output}")
     return 0
 

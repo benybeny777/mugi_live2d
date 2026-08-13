@@ -21,8 +21,10 @@ def test_vrm_viewer_can_open_the_isolated_tpose_experiment() -> None:
 
     assert 'modelVariant === "tpose"' in viewer
     assert '"../temp/mugi-tpose-experiment.vrm"' in viewer
-    assert 'leftUpperArm: modelVariant === "tpose" ? -1.05 : 0' in viewer
-    assert 'rightUpperArm: modelVariant === "tpose" ? 1.05 : 0' in viewer
+    assert "leftUpperArm: -1.05" in viewer
+    assert "rightUpperArm: 1.05" in viewer
+    assert "const blinkDuration = 280;" in viewer
+    assert "const manualNeutralBlink = 0;" in viewer
 
 
 def test_recording_uses_high_density_opaque_background() -> None:
@@ -34,10 +36,10 @@ def test_recording_uses_high_density_opaque_background() -> None:
     assert "renderer.setClearColor(0x000000, 0)" in viewer
 
 
-def test_manual_neutral_keeps_natural_resting_eyelids() -> None:
+def test_manual_neutral_keeps_fully_open_source_eyelids() -> None:
     viewer = (ROOT / "vrm-viewer" / "viewer.js").read_text(encoding="utf-8")
 
-    assert "const manualNeutralBlink = 0.15" in viewer
+    assert "const manualNeutralBlink = 0;" in viewer
     assert '!autoMotion.checked && !emotion.value ? manualNeutralBlink : 0' in viewer
 
 

@@ -23,8 +23,8 @@ def test_vrm_release_quality_gate() -> None:
     assert errors == []
     assert metrics == {
         "bytes": (ROOT / "exports" / "vrm" / "mugi.vrm").stat().st_size,
-        "meshes": 18,
-        "vertices": 459,
+        "meshes": 17,
+        "vertices": 347,
         "facialGridMeshes": 8,
         "presetExpressions": 17,
         "customExpressions": 4,

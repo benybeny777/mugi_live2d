@@ -54,8 +54,8 @@ def validate_release(root: Path = ROOT) -> tuple[list[str], dict[str, Any]]:
         "latestPreviews": 2,
     }
     expected = {
-        "meshes": 18,
-        "vertices": 459,
+        "meshes": 17,
+        "vertices": 347,
         "facialGridMeshes": 8,
         "presetExpressions": 17,
         "customExpressions": 4,

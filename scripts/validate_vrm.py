@@ -208,6 +208,10 @@ def validate(path: Path) -> list[str]:
     missing_expressions = sorted(REQUIRED_EXPRESSIONS - preset.keys())
     if missing_expressions:
         errors.append("missing required expressions: " + ", ".join(missing_expressions))
+    for name in REQUIRED_EXPRESSIONS:
+        expression = preset.get(name, {})
+        if not expression.get("morphTargetBinds"):
+            errors.append(f"required expression {name} has no morph target bindings")
     custom = vrm.get("expressions", {}).get("custom", {})
     for name in ("breath", "idleLeft", "idleRight"):
         if name not in custom:

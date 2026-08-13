@@ -17,6 +17,45 @@ TORSO_RIGHT_RATIO = 0.66
 LEG_TOP_RATIO = 0.535
 
 
+def _ellipse(
+    yy: np.ndarray,
+    xx: np.ndarray,
+    center_x: float,
+    center_y: float,
+    radius_x: float,
+    radius_y: float,
+) -> np.ndarray:
+    """Return an ellipse selector in reference-canvas coordinates."""
+    return ((xx - center_x) / radius_x) ** 2 + ((yy - center_y) / radius_y) ** 2 <= 1.0
+
+
+def _solid_patch(
+    canvas_size: tuple[int, int],
+    selector: np.ndarray,
+    color: tuple[int, int, int, int],
+) -> Image.Image:
+    """Create a deterministic local color patch."""
+    image = Image.new("RGBA", canvas_size, color)
+    image.putalpha(Image.fromarray(np.where(selector, color[3], 0).astype(np.uint8), mode="L"))
+    return image
+
+
+def _inpaint_patch(rgb: np.ndarray, selector: np.ndarray, sigma: float = 24.0) -> Image.Image:
+    """Extend surrounding pixels into a small facial-feature mask."""
+    known = (~selector).astype(np.float32)
+    weights = ndimage.gaussian_filter(known, sigma=sigma)
+    filled_channels = []
+    for channel in range(3):
+        weighted = ndimage.gaussian_filter(
+            rgb[:, :, channel].astype(np.float32) * known, sigma=sigma
+        )
+        filled_channels.append(weighted / np.maximum(weights, 1e-6))
+    filled = np.stack(filled_channels, axis=2)
+    result = Image.fromarray(np.clip(filled, 0, 255).astype(np.uint8), mode="RGB").convert("RGBA")
+    result.putalpha(Image.fromarray(np.where(selector, 255, 0).astype(np.uint8), mode="L"))
+    return result
+
+
 def _foreground(image: Image.Image) -> tuple[np.ndarray, np.ndarray]:
     """Recover prematte-free RGB and alpha from the plain white background."""
     rgb = np.asarray(image.convert("RGB"), dtype=np.int16)
@@ -56,7 +95,14 @@ def _masked(rgb: np.ndarray, alpha: np.ndarray, selector: np.ndarray) -> Image.I
     return result
 
 
-def _sprite(name: str, bone: str, depth: float, image: Image.Image) -> LayerSprite:
+def _sprite(
+    name: str,
+    bone: str,
+    depth: float,
+    image: Image.Image,
+    *,
+    rest_visible: bool = True,
+) -> LayerSprite:
     box = image.getchannel("A").getbbox()
     if box is None:
         raise ValueError(f"T-pose layer {name} has no visible pixels")
@@ -67,7 +113,7 @@ def _sprite(name: str, bone: str, depth: float, image: Image.Image) -> LayerSpri
         min(image.width, box[2] + padding),
         min(image.height, box[3] + padding),
     )
-    return LayerSprite(name, bone, depth, image.crop(padded_box), padded_box)
+    return LayerSprite(name, bone, depth, image.crop(padded_box), padded_box, rest_visible)
 
 
 def extract_tpose_sprites(source_path: Path) -> tuple[tuple[int, int], list[LayerSprite]]:
@@ -94,6 +140,56 @@ def extract_tpose_sprites(source_path: Path) -> tuple[tuple[int, int], list[Laye
     hair_or_outline = (rgb[:, :, 0] < 165) & (rgb[:, :, 1] < 150) & (rgb[:, :, 2] < 135)
     head_center = np.abs(xx - center) <= width * 0.13
     head = (yy < head_core_bottom) | ((yy < head_bottom) & (hair_or_outline | head_center))
+    left_eye_roi = _ellipse(yy, xx, width * 0.4655, height * 0.1604, width * 0.030, height * 0.019)
+    right_eye_roi = _ellipse(yy, xx, width * 0.5325, height * 0.1604, width * 0.030, height * 0.019)
+    mouth_roi = _ellipse(yy, xx, width * 0.499, height * 0.187, width * 0.022, height * 0.010)
+    eye_green = (
+        (rgb[:, :, 1] > 70)
+        & (rgb[:, :, 1] > rgb[:, :, 0] * 1.12)
+        & (rgb[:, :, 1] > rgb[:, :, 2] * 1.02)
+        & (rgb[:, :, 0] < 125)
+    )
+    eye_dark = (rgb.min(axis=2) < 135) & (rgb.mean(axis=2) < 185)
+    eye_chroma = rgb.max(axis=2) - rgb.min(axis=2)
+    eye_light = (rgb.mean(axis=2) > 205) & (eye_chroma < 45) & ~eye_green
+    left_iris_seed = left_eye_roi & eye_green
+    right_iris_seed = right_eye_roi & eye_green
+    left_iris_mask = left_eye_roi & (
+        left_iris_seed | (eye_dark & ndimage.binary_dilation(left_iris_seed, iterations=18))
+    )
+    right_iris_mask = right_eye_roi & (
+        right_iris_seed | (eye_dark & ndimage.binary_dilation(right_iris_seed, iterations=18))
+    )
+    left_lashes_mask = (
+        left_eye_roi & eye_dark & ~ndimage.binary_dilation(left_iris_mask, iterations=3)
+    )
+    right_lashes_mask = (
+        right_eye_roi & eye_dark & ~ndimage.binary_dilation(right_iris_mask, iterations=3)
+    )
+    left_white_mask = (
+        left_eye_roi & eye_light & ~ndimage.binary_dilation(left_iris_mask, iterations=2)
+    )
+    right_white_mask = (
+        right_eye_roi & eye_light & ~ndimage.binary_dilation(right_iris_mask, iterations=2)
+    )
+    mouth_dark = mouth_roi & (rgb.mean(axis=2) < 205) & (rgb[:, :, 0] >= rgb[:, :, 2] * 0.72)
+    cleanup_selector = ndimage.binary_dilation(
+        left_white_mask
+        | right_white_mask
+        | left_iris_mask
+        | right_iris_mask
+        | left_lashes_mask
+        | right_lashes_mask
+        | mouth_dark,
+        iterations=5,
+    )
+    face_cleanup = _inpaint_patch(recovered_rgb, cleanup_selector)
+    mouth_pixels = rgb[mouth_dark]
+    mouth_inside_color = (
+        tuple(int(value) for value in np.percentile(mouth_pixels, 20, axis=0))
+        if len(mouth_pixels)
+        else (110, 50, 50)
+    )
     upper_garment = (
         (yy >= upper_torso)
         & (yy < head_bottom)
@@ -166,5 +262,46 @@ def extract_tpose_sprites(source_path: Path) -> tuple[tuple[int, int], list[Laye
         ),
         _sprite("torso", "spine", -0.010, _masked(recovered_rgb, alpha, torso)),
         _sprite("head", "head", 0.010, _masked(recovered_rgb, alpha, head)),
+        _sprite(
+            "face_cleanup",
+            "head",
+            0.015,
+            face_cleanup,
+        ),
+        _sprite(
+            "left_eye_white",
+            "head",
+            0.020,
+            _masked(recovered_rgb, alpha, left_white_mask),
+        ),
+        _sprite(
+            "right_eye_white",
+            "head",
+            0.020,
+            _masked(recovered_rgb, alpha, right_white_mask),
+        ),
+        _sprite("left_iris", "head", 0.021, _masked(recovered_rgb, alpha, left_iris_mask)),
+        _sprite("right_iris", "head", 0.021, _masked(recovered_rgb, alpha, right_iris_mask)),
+        _sprite("left_lashes", "head", 0.022, _masked(recovered_rgb, alpha, left_lashes_mask)),
+        _sprite("right_lashes", "head", 0.022, _masked(recovered_rgb, alpha, right_lashes_mask)),
+        _sprite(
+            "mouth_inside",
+            "head",
+            0.024,
+            _solid_patch(
+                source.size,
+                _ellipse(
+                    yy,
+                    xx,
+                    width * 0.499,
+                    height * 0.187,
+                    width * 0.014,
+                    height * 0.006,
+                ),
+                (*mouth_inside_color, 255),
+            ),
+            rest_visible=False,
+        ),
+        _sprite("mouth", "head", 0.025, _masked(recovered_rgb, alpha, mouth_dark)),
     ]
     return source.size, sprites
