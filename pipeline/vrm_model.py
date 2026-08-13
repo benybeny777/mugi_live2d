@@ -24,7 +24,7 @@ VRM_META: dict[str, Any] = {
     "version": "6.0.0",
     "authors": ["benybeny777"],
     "copyrightInformation": "Copyright (c) benybeny777. All rights reserved.",
-    "references": ["work/psd/hiyori/mugi-hiyori-compatible-final-2x.psd"],
+    "references": ["work/psd/hiyori/mugi-hiyori-compatible-final.psd"],
     "licenseUrl": LICENSE_URL,
     "avatarPermission": "onlyAuthor",
     "allowExcessivelyViolentUsage": False,
@@ -109,11 +109,7 @@ def _build_skeleton(
         else:
             nodes[bones[parent]].setdefault("children", []).append(bones[bone])
             parent_position = world[parent]
-            world[bone] = (
-                parent_position[0] + translation[0],
-                parent_position[1] + translation[1],
-                parent_position[2] + translation[2],
-            )
+            world[bone] = tuple(parent_position[index] + translation[index] for index in range(3))
     return root, bones, world
 
 
@@ -143,10 +139,8 @@ def _build_spring_skeleton(
         parent_position = bone_world.get(parent, spring_world.get(parent))
         if parent_position is None:
             raise ValueError(f"unknown spring bone parent position: {parent}")
-        spring_world[name] = (
-            parent_position[0] + translation[0],
-            parent_position[1] + translation[1],
-            parent_position[2] + translation[2],
+        spring_world[name] = tuple(
+            parent_position[index] + translation[index] for index in range(3)
         )
     return spring_nodes, spring_world
 
@@ -258,13 +252,13 @@ def _skin_data(
     if spring_pair is not None:
         lower_joint = joint_lookup[spring_pair[0]]
         upper_joint = joint_lookup[spring_pair[1]]
-        spring_joints: list[int] = []
-        spring_weights: list[float] = []
+        joints: list[int] = []
+        weights: list[float] = []
         for row in range(rows + 1):
             upper_weight = row / rows
             lower_weight = 1.0 - upper_weight
             for _ in range(columns + 1):
-                spring_joints.extend(
+                joints.extend(
                     [
                         lower_joint if lower_weight > 0.0 else 0,
                         upper_joint if upper_weight > 0.0 else 0,
@@ -272,25 +266,21 @@ def _skin_data(
                         0,
                     ]
                 )
-                spring_weights.extend([lower_weight, upper_weight, 0.0, 0.0])
-        return spring_joints, spring_weights, True
+                weights.extend([lower_weight, upper_weight, 0.0, 0.0])
+        return joints, weights, True
     if sprite.name == "accessory":
         accessory_joint = joint_lookup["accessoryRoot"]
         vertex_count = (columns + 1) * (rows + 1)
-        accessory_joints = [accessory_joint, 0, 0, 0] * vertex_count
-        accessory_weights = [1.0, 0.0, 0.0, 0.0] * vertex_count
-        return accessory_joints, accessory_weights, False
+        joints = [accessory_joint, 0, 0, 0] * vertex_count
+        weights = [1.0, 0.0, 0.0, 0.0] * vertex_count
+        return joints, weights, False
     secondary_bone: str | None = None
     if sprite.name == "torso":
         secondary_bone = "chest"
     elif "UpperLeg" in sprite.bone:
         secondary_bone = sprite.bone.replace("UpperLeg", "LowerLeg")
     primary_joint = joint_lookup[sprite.bone]
-    secondary_joint = (
-        joint_lookup.get(secondary_bone, primary_joint)
-        if secondary_bone is not None
-        else primary_joint
-    )
+    secondary_joint = joint_lookup.get(secondary_bone, primary_joint)
     joints: list[int] = []
     weights: list[float] = []
     for row in range(rows + 1):
@@ -377,7 +367,6 @@ def _target_vertices(
     target: str,
     base: list[tuple[float, float, float]],
     bone_world: dict[str, tuple[float, float, float]],
-    canvas_height: int,
 ) -> list[tuple[float, float, float]]:
     center = (
         sum(point[0] for point in base) / len(base),
@@ -410,7 +399,7 @@ def _target_vertices(
         width_scale, height_scale = scales[target]
         source_height = max(point[1] for point in base) - min(point[1] for point in base)
         if sprite.name == "mouth_inside":
-            source_height = 1.8 * (sprite.canvas_box[3] - sprite.canvas_box[1]) / canvas_height
+            source_height = 1.8 * (sprite.canvas_box[3] - sprite.canvas_box[1]) / 4175
         source_height = max(source_height, 1e-5)
         shaped: list[tuple[float, float, float]] = []
         for index, (x, _, z) in enumerate(base):
@@ -504,7 +493,7 @@ def _prepare_sprite_texture(image: Image.Image, scale: float) -> Image.Image:
     return Image.merge("RGBA", (*rgb.split(), alpha))
 
 
-def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 8192) -> dict[str, Any]:
+def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 4096) -> dict[str, Any]:
     canvas_size, sprites = extract_layer_sprites(psd_path)
     binary = BinaryBuilder()
     nodes: list[dict[str, Any]] = []
@@ -638,15 +627,9 @@ def build_layered_vrm(psd_path: Path, output: Path, max_texture_size: int = 8192
         names = _target_names(sprite.name)
         target_indices[sprite.name] = {name: index for index, name in enumerate(names)}
         for target_name in names:
-            transformed = _target_vertices(
-                sprite, target_name, base, bone_world, canvas_size[1]
-            )
+            transformed = _target_vertices(sprite, target_name, base, bone_world)
             offsets = [
-                (
-                    transformed[index][0] - base[index][0],
-                    transformed[index][1] - base[index][1],
-                    transformed[index][2] - base[index][2],
-                )
+                tuple(transformed[index][axis] - base[index][axis] for axis in range(3))
                 for index in range(vertex_count)
             ]
             offset_values = _flatten(offsets)

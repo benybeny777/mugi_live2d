@@ -11,7 +11,7 @@ from scripts.validate_vrm import read_glb
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MODEL = ROOT / "exports" / "vrm" / "mugi.vrm"
-DEFAULT_PSD = ROOT / "work" / "psd" / "hiyori" / "mugi-hiyori-compatible-final-2x.psd"
+DEFAULT_PSD = ROOT / "work" / "psd" / "hiyori" / "mugi-hiyori-compatible-final.psd"
 DEFAULT_OUTPUT = ROOT / "docs" / "media" / "mugi-vrm-preview.gif"
 
 
@@ -251,7 +251,7 @@ def render_preview(
         x = (canvas_size[0] - character.width) // 2
         y = canvas_size[1] - character.height - 42
         frame.alpha_composite(character, (x, y))
-        frames.append(frame.convert("P", palette=Image.Palette.ADAPTIVE, colors=256))
+        frames.append(frame.convert("P", palette=Image.Palette.ADAPTIVE, colors=192))
     output.parent.mkdir(parents=True, exist_ok=True)
     frames[0].save(
         output,
