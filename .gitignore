@@ -21,7 +21,6 @@ tools/see-through/.venv/
 
 # Proprietary/downloaded Live2D runtime copied by viewer/setup-runtime.ps1.
 viewer/vendor/
-vrm-viewer/vendor/
 viewer/__pycache__/
 scripts/__pycache__/
 tests/__pycache__/

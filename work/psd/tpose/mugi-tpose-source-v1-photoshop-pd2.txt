@@ -1,6 +1,0 @@
-OK
-source=C:\00_PG\40_mugi_live2d\temp\mugi-tpose-nanobanana-v1.png
-output=C:\00_PG\40_mugi_live2d\temp\mugi-tpose-nanobanana-v1-photoshop-pd2-4x.psd
-original=730x1024
-upscaled=2920x4096
-method=Photoshop Preserve Details 2.0
